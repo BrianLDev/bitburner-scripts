@@ -123,33 +123,29 @@ export function CalcMaxThreads(ns, file, hostname, minPct=.03) {
 }
 
 export function GetTargets(ns, excludePoor=false) {
+	// NOTE: THIS RETURNS AN ARRAY OF SERVER OBJECTS, NOT JUST THE SERVER HOSTNAMES
+	const f = ns.formulas.hacking;
 	let serverList = ns.scan();
 	let rootedServers = GetRootedServers(ns, serverList);
 	let targetList = []
 	for (let i=0; i<rootedServers.length; i++) {
-		let target = new Object();
-		target.server = rootedServers[i];
-		if (target.server.substring(0, 5) == "pserv")
+		let target = ns.getServer(rootedServers[i]);
+		if (target.hostname.substring(0, 5) == "pserv")
 			continue;	
 		else {
-			target.maxMoney = ns.getServerMaxMoney(target.server);
-			target.currentMoney = ns.getServerMoneyAvailable(target.server)
-			target.securityMin = ns.getServerMinSecurityLevel(target.server);
-			target.securityCurrent = ns.getServerSecurityLevel(target.server).toFixed(1);
-			target.maxRam = ns.getServerMaxRam(target.server);
-			target.hackTime = ns.getHackTime(target.server);
-			target.weakenTime = ns.getWeakenTime(target.server);
-			target.growTime = ns.getGrowTime(target.server);
-			target.roi = (target.maxMoney * 0.5) / (target.weakenTime + 200*3) * 100;
 			// push on to targetList unless excluded by parameters
-			if (excludePoor && target.maxMoney < 1)
+			if (excludePoor && target.moneyMax < 1)
 				continue;
-			else
+			else {
+				target.hackTimeCurr = ns.getHackTime(target.hostname);
+				target.weakenTimeCurr = ns.getWeakenTime(target.hostname);
+				target.growTimeCurr = ns.getGrowTime(target.hostname);
+				target.hackEarnRate = CalcHackEarnRate(ns, target.hostname);
 				targetList.push(target);
+			}
 		}
 	}
-	// sort list by maxMoney
-	targetList.sort((a, b) => (a.maxMoney < b.maxMoney) ? 1 : -1);
+	targetList.sort((a, b) => (a.hackEarnRate < b.hackEarnRate) ? 1 : -1);	// sort list by hackEarnRate: max --> min
 	return targetList;
 }
 
@@ -184,8 +180,8 @@ export function GetHosts(ns) {
 export function GetFreeRam(ns, hostname) {
 	let freeRam = ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname);
 	let cushion = 0;
-	// leave a little cushion of 10 GB on "home" for misc scripts if there's more than 256GB max
-	if (hostname == "home" && ns.getServerMaxRam("home") >= 256)
+	// leave a little cushion of 10 GB on "home" for misc scripts if max ram >= 128 GB
+	if (hostname == "home" && ns.getServerMaxRam("home") >= 128)
 		cushion = 10;
 	return freeRam - cushion;
 }
@@ -203,6 +199,19 @@ export async function CopyHackFilesToHost(ns, host) {
 	await ns.scp(hackfile, "home", host.server);
 	await ns.scp(growfile, "home", host.server);
 	await ns.scp(weakenfile, "home", host.server);
+}
+
+export function CalcHackEarnRate(ns, serverName, hackPct=0.5) {
+	// returns hackEarnRate in $1 per ms
+	// Note: this requires Formulas.exe
+	const f = ns.formulas.hacking;
+	let serverObj = ns.getServer(serverName);
+	let player = ns.getPlayer();
+	serverObj.hackDifficulty = serverObj.minDifficulty;
+	serverObj.moneyAvailalbe = serverObj.moneyMax;
+	let weakenTime = f.weakenTime(serverObj, player);	// weaken time is the longest of the 3
+	let hackEarnRate = Math.round((serverObj.moneyMax * hackPct) / weakenTime);
+	return hackEarnRate;
 }
 
 export function RemoveFileRemoteServers(ns, filename, rootedOnly=true) {
@@ -260,6 +269,13 @@ export function KillAllRemote(ns) {
 			killed++;
 	}
 	ns.tprint("Done. Killed " + killed  + " scripts on remote servers.");
+}
+
+export function FormatTabs(str) {
+	// determine tabs based on string str length
+	let tabs = str.length < 7 ? "\t\t\t" : 
+		str.length > 14 ? "\t" : "\t\t";
+	return tabs;
 }
 
 export function FormatMoney(money, decimalPlaces=3) {

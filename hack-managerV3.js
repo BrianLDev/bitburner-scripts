@@ -33,7 +33,7 @@ export async function main(ns) {
 	const h = ns.formulas.hacking;
 	const growThresh = .95;
 	const securityThresh = 1.05;
-	const hackPct = .50;	// <-- manually adjust this if needed depending on workload and money gained
+	const hackPct = .40;	// <-- manually adjust this if needed depending on workload and money gained
 
 
 	// EXECUTE HACKING LOOP
@@ -43,13 +43,11 @@ export async function main(ns) {
 		// TODO: ADD ROOTALL FUNCTION HERE
 		await CopyHackFilesToAllHosts(ns);
 		targetsList = GetTargets(ns, true);	// refresh list after each loop
-		targetsList.sort((a, b) => a.maxMoney > b.maxMoney ? 1 : -1);	// sort by lowest money first to get low hanging fruit first
-		
-		// targetsList = ['the-hub', 'omega-net', 'phantasy', 'silver-helix'];	// TODO: RUN AN ROI CALCULATION TO AUTOMATE TARGET SELECTION
+		targetsList.sort((a, b) => (a.hackEarnRate < b.hackEarnRate) ? 1 : -1);	// sort list by hackEarnRate: max --> min
+		targetsList = targetsList.slice(0, 1);	// gets the top server based on hackEarnRate
 
 		for (let i=0; i<targetsList.length; i++) {
-			targetName = targetsList[i].server;
-			// targetName = targetsList[i];
+			targetName = targetsList[i].hostname;
 
 			let nextJob = GetNextJob(ns, targetName, growThresh, securityThresh, verbose)
 
