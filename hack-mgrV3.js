@@ -29,11 +29,12 @@ export async function main(ns) {
 		maxMinutes = 9999;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
 	if (verbose != "true")
 		verbose = false;
+	// verbose = true;	// TODO: DELETE THIS AFTER TESTING
 
 	const h = ns.formulas.hacking;
 	const growThresh = .95;
 	const securityThresh = 1.05;
-	const hackPct = .40;	// <-- manually adjust this if needed depending on workload and money gained
+	const hackPct = 1.0;	// <-- manually adjust this if needed depending on workload and money gained
 
 
 	// EXECUTE HACKING LOOP
@@ -48,6 +49,9 @@ export async function main(ns) {
 
 		for (let i=0; i<targetsList.length; i++) {
 			targetName = targetsList[i].hostname;
+
+			//TODO: DELETE THIS PART AFTER DONE TESTING
+			targetName = 'the-hub';
 
 			let nextJob = GetNextJob(ns, targetName, growThresh, securityThresh, verbose)
 
@@ -88,7 +92,7 @@ export const JobType = {
 export async function CopyHackFilesToAllHosts(ns) {
 	let hosts = GetHosts(ns);
 	for (let i=0; i<hosts.length; i++) {
-		await CopyHackFilesToHost(ns, hosts[i]);
+		await CopyHackFilesToHost(ns, hosts[i].hostname);
 	}
 }
 
@@ -127,7 +131,7 @@ export async function WeakenTarget(ns, targetName, maxThreads=9999, securityThre
 	if (verbose)
 		ns.tprint("Weakening " + targetName);
 	while (weakenThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentWeakenThreads = Math.min(weakenThreadsReq, CalcMaxThreads(ns, weakenfile, attackerName, .03));
 		if (currentWeakenThreads > 0) {
 			if (ns.exec(weakenfile, attackerName, currentWeakenThreads, targetName, 1, verbose, Date.now()) > 0) {
@@ -159,7 +163,7 @@ export async function GrowTarget(ns, targetName, maxThreads=9999, growThresh=.95
 		ns.tprint("GrowThreadsReq: " + growThreadsReq);
 	}
 	while (growThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentGrowThreads = Math.min(growThreadsReq, CalcMaxThreads(ns, growfile, attackerName, .03));
 		if (currentGrowThreads > 0) {
 			if (ns.exec(growfile, attackerName, currentGrowThreads, targetName, 1, verbose, Date.now()) > 0) {
@@ -207,7 +211,7 @@ export async function HackBatch(ns, targetName, hackPct, verbose) {
 	// 1) SCHEDULE HACK (delay * -1 + (weakentime-hacktime): resolves 1st)
 	delay = Math.ceil(weakenTime - hackTime - delayTime);
 	while (hackThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentHackThreads = Math.min(hackThreadsReq, CalcMaxThreads(ns, hackfile, attackerName, .03));
 		if (currentHackThreads > 0) {
 			if (ns.exec(hackfile, attackerName, currentHackThreads, targetName, delay, verbose, Date.now()) > 0) {
@@ -227,7 +231,7 @@ export async function HackBatch(ns, targetName, hackPct, verbose) {
 	// 2) SCHDEULE WEAKEN FOR HACK (no delay: resolves 2nd)
 	delay = 1;
 	while (weakenHackThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentWeakenThreads = Math.min(weakenHackThreadsReq, CalcMaxThreads(ns, weakenfile, attackerName, .03));
 		if (currentWeakenThreads > 0) {
 			if (ns.exec(weakenfile, attackerName, currentWeakenThreads, targetName, delay, verbose, Date.now()) > 0) {
@@ -247,7 +251,7 @@ export async function HackBatch(ns, targetName, hackPct, verbose) {
 	// 3) SCHEDULE GROW (delay * 1 + (weakentime-growtime): resolves 3rd)
 	delay = Math.ceil(weakenTime - growTime + delayTime);
 	while (growThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentGrowThreads = Math.min(growThreadsReq, CalcMaxThreads(ns, growfile, attackerName, .03));
 		if (currentGrowThreads > 0) {
 			if (ns.exec(growfile, attackerName, currentGrowThreads, targetName, delay, verbose, Date.now()) > 0) {
@@ -267,7 +271,7 @@ export async function HackBatch(ns, targetName, hackPct, verbose) {
 	// 4) SCHEDULE WEAKEN FOR GROW (delay * 2: resolves last)
 	delay = delayTime * 2;
 	while (weakenGrowThreadsReq > 0) {
-		attackerName = GetNextHost(ns).server;
+		attackerName = GetNextHost(ns).hostname;
 		let currentWeakenThreads = Math.min(weakenGrowThreadsReq, CalcMaxThreads(ns, weakenfile, attackerName, .03));
 		if (currentWeakenThreads > 0) {
 			if (ns.exec(weakenfile, attackerName, currentWeakenThreads, targetName, delay, verbose, Date.now()) > 0) {

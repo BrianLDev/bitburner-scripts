@@ -12,7 +12,6 @@ export function GetAllServers(ns) {
 		nestedServers = GetNestedServers(ns, currentServer);
 		toSearch = toSearch.concat(nestedServers);	
 	}
-	// ns.tprint("FULL SERVER LIST: " + allServers);
 	return allServers;
 }
 
@@ -26,9 +25,8 @@ export function GetServersToRoot(ns) {
 	let allServers = GetAllServers(ns);
 	let serversToRoot = [];
 	for (let i=0; i<allServers.length; i++) {
-		if (!ns.hasRootAccess(allServers[i])) {
+		if (!ns.hasRootAccess(allServers[i]))
 			serversToRoot.push(allServers[i])
-		}
 	}
 	return serversToRoot;
 }
@@ -37,9 +35,8 @@ export function GetRootedServers(ns) {
 	let allServers = GetAllServers(ns);
 	let rootedServers = [];
 	for (let i=0; i<allServers.length; i++) {
-		if (ns.hasRootAccess(allServers[i])) {
+		if (ns.hasRootAccess(allServers[i]))
 			rootedServers.push(allServers[i])
-		}
 	}
 	return rootedServers;
 }
@@ -79,8 +76,6 @@ export function OpenPorts(ns, server) {
 export function GainRootAccess(ns, server) {
 	if (OpenPorts(ns, server)) {	// first open ports
 		ns.nuke(server);			// then nuke
-		// NOTE: apparently automated backdoor comes later in the game. Uncomment at that point.
-		// ns.installBackdoor(server);	// then backdoor
 	}
 	if (ns.hasRootAccess(server)) {
 		ns.tprint("Successfully gained root access on " + server);
@@ -92,24 +87,24 @@ export function GainRootAccess(ns, server) {
 	}
 }
 
-export async function RunHackScript(ns, filename, server, hackTarget) {
-	let threads = CalcMaxThreads(ns, filename, server);
-	if (threads > 0) {
-		ns.tprint("Running hack script on " + server);
-		if (await ns.scp(filename, "home", server) == false) {
-			ns.tprint("Error: couldn't copy file on " + server);
-			return false;
-		}
-		ns.killall(server);
-		if (await ns.exec(filename, server, threads, hackTarget) == false) {
-			ns.tprint("Error: couldn't execute script on " + server);
-			return false;
-		}
-		else {
-			return true;
-		}
-	}
-}
+// export async function RunHackScript(ns, filename, server, hackTarget) {
+// 	let threads = CalcMaxThreads(ns, filename, server);
+// 	if (threads > 0) {
+// 		ns.tprint("Running hack script on " + server);
+// 		if (await ns.scp(filename, "home", server) == false) {
+// 			ns.tprint("Error: couldn't copy file on " + server);
+// 			return false;
+// 		}
+// 		ns.killall(server);
+// 		if (await ns.exec(filename, server, threads, hackTarget) == false) {
+// 			ns.tprint("Error: couldn't execute script on " + server);
+// 			return false;
+// 		}
+// 		else {
+// 			return true;
+// 		}
+// 	}
+// }
 
 export function CalcMaxThreads(ns, file, hostname, minPct=.03) {
 	// minPct is the minimum % of total RAM to use towards a job to prevent millions of tiny 1 thread jobs
@@ -122,9 +117,33 @@ export function CalcMaxThreads(ns, file, hostname, minPct=.03) {
 		return Math.floor(freeRam / ns.getScriptRam(file));
 }
 
+export function CalcRamRequired(ns, file, threads) {
+	const scriptRam = ns.getScriptRam(file);
+	const ramRequired = Math.ceil(scriptRam * threads);
+	return ramRequired;
+}
+
+export function HostsFreeRam(ns) {
+	const hosts = GetHosts(ns);
+	let totalFreeRam = 0;
+	for (let i=0; i<hosts.length; i++) {
+		hosts[i].freeRam = GetFreeRam(hosts[i].hostname);
+		totalFreeRam += hosts[i].freeRam;
+	}
+	return totalFreeRam;
+}
+
+export function HostsMaxRam(ns) {
+	const hosts = GetHosts(ns);
+	let totalMaxRam = 0;
+	for (let i=0; i<hosts.length; i++) {
+		totalMaxRam += hosts[i].maxRam;
+	}
+	return totalMaxRam;
+}
+
 export function GetTargets(ns, excludePoor=false) {
-	// NOTE: THIS RETURNS AN ARRAY OF SERVER OBJECTS, NOT JUST THE SERVER HOSTNAMES
-	const f = ns.formulas.hacking;
+	// NOTE: THIS RETURNS AN ARRAY OF SERVER OBJECTS, NOT JUST THE SERVER HOSTNAME STRINGS
 	let serverList = ns.scan();
 	let rootedServers = GetRootedServers(ns, serverList);
 	let targetList = []
@@ -137,10 +156,7 @@ export function GetTargets(ns, excludePoor=false) {
 			if (excludePoor && target.moneyMax < 1)
 				continue;
 			else {
-				target.hackTimeCurr = ns.getHackTime(target.hostname);
-				target.weakenTimeCurr = ns.getWeakenTime(target.hostname);
-				target.growTimeCurr = ns.getGrowTime(target.hostname);
-				target.hackEarnRate = CalcHackEarnRate(ns, target.hostname);
+				target = AnalyzeTarget(ns, target);	// Adds useful stats and properties
 				targetList.push(target);
 			}
 		}
@@ -150,30 +166,24 @@ export function GetTargets(ns, excludePoor=false) {
 }
 
 export function GetHosts(ns) {
+	// NOTE: THIS RETURNS AN ARRAY OF SERVER OBJECTS, NOT JUST THE SERVER HOSTNAME STRINGS
 	let serverList = ns.scan();
-	let hackedServers = GetRootedServers(ns, serverList);
+	let rootedServers = GetRootedServers(ns, serverList);
 	let hostList = [];
-	for (let i=0; i<hackedServers.length; i++) {
-		let host = new Object();
-		host.server = hackedServers[i];
-		host.maxRam = ns.getServerMaxRam(host.server);
-		host.usedRam = ns.getServerUsedRam(host.server);
-		host.freeRam = GetFreeRam(ns, host.server);
+	for (let i=0; i<rootedServers.length; i++) {
+		let host = ns.getServer(rootedServers[i]);
+		host.freeRam = GetFreeRam(ns, host.hostname);
 		if (host.maxRam > 0)
 			hostList.push(host);
 		else
 			continue;
 	}
 	// add home
-	let home = new Object();
-	home.server = "home";
-	home.maxRam = ns.getServerMaxRam("home");
-	home.usedRam = ns.getServerUsedRam("home");
+	let home = ns.getServer("home");
 	home.freeRam = GetFreeRam(ns, "home");
-	// home.cores =	// Is there a way to get cores??
 	hostList.push(home);
-	// sort list by maxRam
-	hostList.sort((a, b) => (a.freeRam < b.freeRam) ? 1 : -1);
+	// sort list by maxRam then return
+	hostList.sort((a, b) => (a.maxRam < b.maxRam) ? 1 : -1);
 	return hostList;
 }
 
@@ -183,7 +193,7 @@ export function GetFreeRam(ns, hostname) {
 	// leave a little cushion of 10 GB on "home" for misc scripts if max ram >= 128 GB
 	if (hostname == "home" && ns.getServerMaxRam("home") >= 128)
 		cushion = 10;
-	return freeRam - cushion;
+	return Math.round(freeRam - cushion);
 }
 
 export function GetNextHost(ns) {
@@ -192,26 +202,44 @@ export function GetNextHost(ns) {
 	return hosts[0];	// returns host with most available ram
 }
 
-export async function CopyHackFilesToHost(ns, host) {
+export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.95, securityThresh=1.05) {
+	// note 1: this takes and returns a Server object
+	// note 2: this requires Formulas.exe
+	// hackEarnRate is $1 per ms
+	const h = ns.formulas.hacking;
+	let player = ns.getPlayer();
+
+	target.isWeakened = target.hackDifficulty <= target.minDifficulty * securityThresh;
+	target.isGrown = target.moneyAvailable >= target.moneyMax * moneyThresh;
+	// Hack stats: set security and $ to levels prepared for hack
+	target.hackDifficulty = target.minDifficulty * securityThresh;
+	target.moneyAvailable = target.moneyMax * moneyThresh;
+	target.hackChance = h.hackChance(target, player);
+	target.hackTime = Math.ceil(h.hackTime(target, player));
+	target.hackPctPerThread = h.hackPercent(target, player);
+	target.hackExp = h.hackExp(target, player);
+	target.expectedValue = Math.round((target.moneyAvailable * hackPct * target.hackChance));
+	// Grow stats: assume min security and 50% money
+	target.hackDifficulty = target.minDifficulty * securityThresh;
+	target.moneyAvailable = target.moneyMax * (1-hackPct);
+	target.growTime = Math.ceil(h.growTime(target, player));
+	// Weaken stats: set security and $ to level after grow x 2
+	let secIncGrow = ns.growthAnalyze(target.hostname, 1/hackPct, 1) * .004; // each thread increases sec by .004
+	target.hackDifficulty = (target.minDifficulty * securityThresh) + secIncGrow;
+	target.moneyAvailable = target.moneyMax * moneyThresh;
+	target.weakenTime = Math.ceil(h.weakenTime(target, player));	
+	// calculate hackEarnRate
+	target.hackEarnRate = Math.round(target.expectedValue / target.weakenTime);	// weaken time is the longest of the 3
+	return target;
+}
+
+export async function CopyHackFilesToHost(ns, hostname) {
 	const hackfile = "/hax/hack.js";
 	const growfile = "/hax/grow.js";
 	const weakenfile = "/hax/weaken.js";
-	await ns.scp(hackfile, "home", host.server);
-	await ns.scp(growfile, "home", host.server);
-	await ns.scp(weakenfile, "home", host.server);
-}
-
-export function CalcHackEarnRate(ns, serverName, hackPct=0.5) {
-	// returns hackEarnRate in $1 per ms
-	// Note: this requires Formulas.exe
-	const f = ns.formulas.hacking;
-	let serverObj = ns.getServer(serverName);
-	let player = ns.getPlayer();
-	serverObj.hackDifficulty = serverObj.minDifficulty;
-	serverObj.moneyAvailalbe = serverObj.moneyMax;
-	let weakenTime = f.weakenTime(serverObj, player);	// weaken time is the longest of the 3
-	let hackEarnRate = Math.round((serverObj.moneyMax * hackPct) / weakenTime);
-	return hackEarnRate;
+	await ns.scp(hackfile, "home", hostname);
+	await ns.scp(growfile, "home", hostname);
+	await ns.scp(weakenfile, "home", hostname);
 }
 
 export function RemoveFileRemoteServers(ns, filename, rootedOnly=true) {
@@ -271,10 +299,10 @@ export function KillAllRemote(ns) {
 	ns.tprint("Done. Killed " + killed  + " scripts on remote servers.");
 }
 
-export function FormatTabs(str) {
+export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {
 	// determine tabs based on string str length
-	let tabs = str.length < 7 ? "\t\t\t" : 
-		str.length > 14 ? "\t" : "\t\t";
+	let tabs = str.length < breakpoint1 ? "\t\t\t" : 
+		str.length > breakpoint2 ? "\t" : "\t\t";
 	return tabs;
 }
 
