@@ -3,9 +3,8 @@ export async function main(ns) {
 	let targetName = ns.args[0];
 	let sleeptime = ns.args[1];
 	let verbose = ns.args[2];
-	
-	if (verbose != true || verbose != "true")
-		verbose = false;
+	let rest = ns.args[3];	// ignore any additional args
+	verbose = (verbose == true || verbose == "true") ? true : false;
 		
 	if (!targetName)
 		ns.tprint("Error: missing targetName.");

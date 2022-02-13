@@ -34,7 +34,7 @@ export async function main(ns) {
 	const h = ns.formulas.hacking;
 	const growThresh = .95;
 	const securityThresh = 1.05;
-	const hackPct = 1.0;	// <-- manually adjust this if needed depending on workload and money gained
+	const hackPct = .40;	// <-- manually adjust this if needed depending on workload and money gained
 
 
 	// EXECUTE HACKING LOOP
@@ -51,7 +51,7 @@ export async function main(ns) {
 			targetName = targetsList[i].hostname;
 
 			//TODO: DELETE THIS PART AFTER DONE TESTING
-			targetName = 'the-hub';
+			targetName = 'phantasy';
 
 			let nextJob = GetNextJob(ns, targetName, growThresh, securityThresh, verbose)
 
