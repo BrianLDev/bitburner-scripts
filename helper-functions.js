@@ -78,11 +78,11 @@ export function GainRootAccess(ns, server) {
 		ns.nuke(server);			// then nuke
 	}
 	if (ns.hasRootAccess(server)) {
-		ns.tprint("Successfully gained root access on " + server);
+		// ns.tprint("Successfully gained root access on " + server);
 		return true;
 	}
 	else {
-		ns.tprint("WARNING: didn't gain root access on " + server);
+		// ns.tprint("WARNING: didn't gain root access on " + server);
 		return false;
 	}
 }
@@ -222,7 +222,7 @@ export function GetNextHost(ns) {
 	return hosts[0];	// returns host with most available ram
 }
 
-export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.95, securityThresh=1.05) {
+export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.99, securityThresh=1.01) {
 	// note 1: this takes and returns a Server object
 	// note 2: this requires Formulas.exe
 	// hackEarnRate is $1 per ms

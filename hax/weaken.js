@@ -11,14 +11,21 @@ export async function main(ns) {
 	else if (!sleeptime)
 		ns.tprint("Error: missing sleeptime");
 	else {
+		let startTime = new Date(Date.now());
+		startTime = startTime.toLocaleTimeString('en-US');
+		if (verbose)
+			ns.tprint(`${startTime}: 🔨WEAKEN🔨 schdeuled ${ns.getHostname()} => ${targetName}`);
+
 		await ns.sleep(sleeptime);
 		let decrease = await ns.weaken(targetName);
 
 		if (verbose == true) {
+			let endTime = new Date(Date.now());
+			endTime = endTime.toLocaleTimeString('en-US');
 			if (decrease > 0)
-				ns.tprint(ns.getHostname() + " WEAKENED=> " + targetName + "; decreased security by " + decrease)
+				ns.tprint(`${endTime}: 📉WEAKEN📉 completed ${ns.getHostname()} => ${targetName}, security decreased: ${decrease}`);
 			else
-				ns.tprint(ns.getHostname() + " failed to weaken " + targetName + ".");
+				ns.tprint(`${endTime}: ❌WEAKEN❌ failed ${ns.getHostname()} => ${targetName}`);
 		}
 	}
 }

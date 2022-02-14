@@ -7,9 +7,12 @@ import { AnalyzeTarget, CalcRamRequired, CopyHackFilesToHost, JobType, Vprint} f
 // more than once on a host
 
 /* TODO IMPROVEMENTS:
-- make sure there is enough free RAM across all hosts to run a full hack batch (calculate batch ram).
-	this will prevent partially executed batches that mess up the flow
-	may need to dynamically calculate hackPct, maxThreads for each function, etc
+- Makes some good money but has room for improvement.
+- Timing seems to be off a bit and target money/security don't always restore after each batch.
+	- batch overlap is a common problem according to others
+	- probably need to log timestamps of when each script is scheduled and completed to see whats off
+	- also double check the time calculator functions on the simulated server object
+	- also need to watch out for gaining hack levels (which shortens up times). hard to handle this one.
 - other misc TODOS (search)
 */
 export async function main(ns) {
@@ -23,7 +26,7 @@ export async function main(ns) {
 	if (hackPct == null || hackPct == NaN)
 		hackPct = .40;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
 	if (maxMinutes == null || maxMinutes == NaN)
-		maxMinutes = 3;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
+		maxMinutes = 4;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
 	
 	// verbose = true;	// TODO: REMOVE WHEN DONE TESTING
 	// specificTarget = 'phantasy';	// TODO: REMOVE WHEN DONE TESTING
@@ -32,8 +35,8 @@ export async function main(ns) {
 	const hackfile = "/hax/hack.js";
 	const growfile = "/hax/grow.js";
 	const weakenfile = "/hax/weaken.js";
-	const moneyThresh = .98;
-	const securityThresh = 1.02;
+	const moneyThresh = .99;
+	const securityThresh = 1.01;
 	const growMult = 1 / hackPct;
 	const cushion = 200;	// buffer delay between jobs. Must be > 20ms, but can be less than 200ms (depending on computer)
 	const secIncPerHackThread = 0.002;	// constant per game docs
@@ -42,7 +45,7 @@ export async function main(ns) {
 
 
 	// EXECUTE HACKING LOOP
-	let batchesToRun = 1	// # of hack batches to run before checking for new target (auto updated)
+	let batchesToRun = 100	// # of hack batches to run before checking for new target (auto updated)
 	while(true) {
 		// TODO: ADD ROOTALL SERVERS HERE
 		// TODO: ADD PURCH NEW SERVERS FUNCTION HERE (AFTER IT'S AUTOMATED)
@@ -60,16 +63,16 @@ export async function main(ns) {
 		target = AnalyzeTarget(ns, target, hackPct, moneyThresh, securityThresh);
 
 		// PREPARE TARGET FOR HACKBATCH (Get $ to moneyThresh, security to security Thresh if needed)
-		let delayBatch = 0;
-		delayBatch = await PrepareTarget(target);
+		let batchDelay = 0;
+		batchDelay = await PrepareTarget(target);
+		await ns.sleep(2000);
 
-		// RUN HACKBATCHES
 		let totalMaxRam = HostsMaxRam(ns);
 		let totalFreeRam = HostsFreeRam(ns);
-
+		// HACKBATCH LOOP
 		while (batchesToRun > 0) {
-			// Hack Batch
-			target = await HackBatch(target, delayBatch);	// Batch: Hack -> Weaken -> Grow -> Weaken
+			// HACKBATCH
+			target = await HackBatch(target, batchDelay);	// Batch: Hack -> Weaken -> Grow -> Weaken
 			batchesToRun--;
 
 			// Check that there's enough total ram to run at least 1 full hack batch
@@ -87,8 +90,9 @@ export async function main(ns) {
 				Vprint(ns, verbose, `!!!! Not enough free RAM to run full batch, waiting ${waitSeconds} seconds...`);
 				await ns.sleep(waitSeconds * 1000);
 				totalFreeRam = HostsFreeRam(ns);
+				batchesToRun = 0;
 			}
-			await ns.sleep(cushion * 1.5);
+			await ns.sleep(cushion);
 		}
 
 		if (target.batchRamReq > 0) {
@@ -98,9 +102,6 @@ export async function main(ns) {
 		
 		// // TODO: REMOVE BELOW WHEN DONE TESTING
 		// ns.tprint("DONE!!");
-		// await ns.sleep(10000000000000000);
-		// await ns.sleep(10000000000000000);
-		// await ns.sleep(10000000000000000);
 		// await ns.exit();
 
 		await ns.sleep(cushion * 2);
@@ -123,6 +124,7 @@ export async function main(ns) {
 			threads = CalcJobThreads(ns, target, JobType.weaken, hackPct, moneyThresh, securityThresh);
 			prepDuration = h.weakenTime(target, player) + (cushion * 2);
 			target = await Weaken(target, threads, delay);
+			// target.hackDifficulty = Math.floor(target.minDifficulty * securityThresh);	// assume successful
 		}
 		if (!target.isGrown) {
 			// Grow

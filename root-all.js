@@ -47,11 +47,12 @@ export async function main(ns) {
 			}
 			else {
 				if (GainRootAccess(ns, server.hostname) == false) {
-					// ns.tprint("WARNING: couldn't gain root access on " + server.hostname);
+					ns.tprint("WARNING: couldn't gain root access on " + server.hostname);
 					continue;
 				}
 				if (ns.hasRootAccess(server.hostname) == true) {
 					ns.tprint("SUCCESS!  " + server.hostname + " is rooted.");
+					server.hasAdminRights = true;
 				}
 			}
 		}
