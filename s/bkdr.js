@@ -33,8 +33,7 @@ export async function main(ns) {
 	ns.tprint(`Got backdoor access on: ${gotBackdoorAccess}`);
 }
 
-export const PrimaryTargets = ['CSEC', 'avmnite-02h', 'I.I.I.I', 'run4theh111z', 'The-Cave', 'blade', 
-	'fulcrumtech', 'fulcrumassets'];
+export const PrimaryTargets = ['CSEC', 'avmnite-02h', 'I.I.I.I', 'run4theh111z', 'The-Cave'];
 
 export async function BackdoorNestedServers(ns, targets=primaryTargets, parentName="home", grandparentName="home", verbose=true) {
 	Vprint(ns, verbose, `~~ Checking out the backdoors nested inside ${parentName}`);

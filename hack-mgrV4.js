@@ -38,7 +38,7 @@ export async function main(ns) {
 	const moneyThresh = .99;
 	const securityThresh = 1.01;
 	const growMult = 1 / hackPct;
-	const cushion = 200;	// buffer delay between jobs. Must be > 20ms, but can be less than 200ms (depending on computer)
+	const cushion = 150;	// buffer delay between jobs. Must be > 20ms, but can be less than 200ms (depending on computer)
 	const secIncPerHackThread = 0.002;	// constant per game docs
 	const secIncPerGrowThread = 0.004;	// constant per game docs
 	const secWeakenPerThread = 0.05;	// constant per game docs
@@ -231,7 +231,8 @@ export async function main(ns) {
 		let hosts = GetHosts(ns);
 		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram first
 		const threadsReqOrig = threadsReq;	// to calc security increase after job complete
-		let minThreadsPct = .30;	// the min % of original threads per job. Avoids messy spreads
+		let minThreadsPct = .20;	// the min % of original threads per job. Avoids messy spreads
+		// TODO: MAKE SURE MINTHREADSPCT STILL WORKS IN EARLY GAME WHEN RAM IS TINY
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
@@ -276,6 +277,7 @@ export async function main(ns) {
 		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram first
 		const threadsReqOrig = threadsReq;	// to calc security increase after job complete
 		let minThreadsPct = .40;	// the min % of original threads per job. Avoids messy spreads
+		// TODO: MAKE SURE MINTHREADSPCT STILL WORKS IN EARLY GAME WHEN RAM IS TINY
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
