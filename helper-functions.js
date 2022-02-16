@@ -336,8 +336,12 @@ export const JobType = {
 };
 
 export function Vprint(ns, verbose, string) {
-	if (verbose)
+	if (verbose) {
 		ns.tprint(string);
+		ns.print(string);
+	}
+	else
+		ns.print(string);
 }
 
 export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {

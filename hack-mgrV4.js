@@ -51,6 +51,7 @@ export async function main(ns) {
 		// TODO: ADD PURCH NEW SERVERS FUNCTION HERE (AFTER IT'S AUTOMATED)
 
 		// SELECT TARGET
+		// TODO: CONSIDER TOP 2-3 TARGETS IN LATEGAME WITH MASSIVE RAM. WILL AVOID COLLISIONS.
 		let target;
 		if (specificTarget != null && specificTarget != "" && specificTarget != "_")
 			target = ns.getServer(specificTarget);	// swap to user defined target if in args
@@ -195,6 +196,9 @@ export async function main(ns) {
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
+				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
+				if (host.hostname.slice(0, 7) == 'hacknet')
+					continue;	// skip hacknet server nodes
 				let maxThreads = CalcMaxThreads(ns, weakenfile, host.hostname);
 				maxThreads = Math.min(threadsReq, maxThreads);
 				if (maxThreads <= 0) {
@@ -236,6 +240,9 @@ export async function main(ns) {
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
+				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
+				if (host.hostname.slice(0, 7) == 'hacknet')
+					continue;	// skip hacknet server nodes
 				let maxThreads = CalcMaxThreads(ns, growfile, host.hostname);
 				maxThreads = Math.min(threadsReq, maxThreads);
 				if (maxThreads <= 0) {
@@ -281,6 +288,9 @@ export async function main(ns) {
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
+				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
+				if (host.hostname.slice(0, 7) == 'hacknet')
+					continue;	// skip hacknet server nodes
 				let maxThreads = CalcMaxThreads(ns, hackfile, host.hostname);
 				maxThreads = Math.min(threadsReq, maxThreads);
 				if (maxThreads <= 0) {
