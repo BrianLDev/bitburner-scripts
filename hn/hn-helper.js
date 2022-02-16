@@ -2,17 +2,6 @@
 import { Vprint, FormatMoney } from "helper-functions.js"
 
 export async function main(ns) {
-	// const hns = ns.formulas.hacknetServers;
-	// const constants = hns.constants();
-	// const maxNumNodes = ns.hacknet.maxNumNodes();
-
-	let verbose = true;
-
-	while (true) {
-		HnsUpgradeHacknetServers(ns, verbose);
-
-		await ns.sleep(1);
-	}
 }
 
 export function HnsGetMoney(ns, millionsToBuy=1) {
@@ -23,6 +12,7 @@ export function HnsGetMoney(ns, millionsToBuy=1) {
 	for (let i=0; i<sellQty; i++) {
 		ns.hacknet.spendHashes(HnsUpgrades.Money);
 	}
+	return sellQty;
 }
 
 export function HnsCheckMoneyPotential(ns) {
@@ -36,91 +26,18 @@ export function HnsCheckMoneyPotential(ns) {
 }
 
 export function HnsIncreaseMoneyTo(ns, moneyTarget) {
-	const player = ns.getPlayer();
+	let player = ns.getPlayer();
 	let increase = moneyTarget - player.money;
-	let increaseMillions = increase / 1000000;
-	if (increaseMillions >= 1)
-		HnsGetMoney(ns, increaseMillions);
-}
-
-// Determines the ideal next upgrade out of all current Hacknet servers and buys it if there's enough money
-export function HnsUpgradeHacknetServers(ns, verbose) {
-	// TODO: ALSO INCLUDE BUYING A NEW SERVER
-	// TODO: ALSO INCLUDE CACHE UPGRADES
-	let nodes = GetHacknetNodes(ns);
-	let minHashGain = Number.MAX_SAFE_INTEGER;
-	let nodeToUpgrade = -1;
-	let upgradePart = HnsUpgradeParts.None;
-
-	// cycle through nodes and determine next best upgrade
-	for (let i=0; i<nodes.length; i++) {
-		let node = nodes[i];
-		if (node.levelCostPerHashGain < minHashGain) {
-			minHashGain = node.levelCostPerHashGain;
-			nodeToUpgrade = i;
-			upgradePart = HnsUpgradeParts.Level;
-		}
-		if (node.ramCostPerHashGain < minHashGain) {
-			minHashGain = node.ramCostPerHashGain;
-			nodeToUpgrade = i;
-			upgradePart = HnsUpgradeParts.Ram;
-		}
-		if (node.coresCostPerHashGain < minHashGain) {
-			minHashGain = node.coresCostPerHashGain;
-			nodeToUpgrade = i;
-			upgradePart = HnsUpgradeParts.Cores;
-		}
+	let increaseMillions = Math.ceil(increase / 1000000);
+	if (increaseMillions >= 1) {
+		let millionsGot = HnsGetMoney(ns, increaseMillions);
+		player = ns.getPlayer();
+		if (player.money >= moneyTarget)
+			return true;
+		else
+			return false;
 	}
-
-	// Purchase the upgrade if there's enough money to do it
-	// 1) Upgrade Level
-	if (upgradePart == HnsUpgradeParts.Level && nodeToUpgrade > -1) {
-		let node = nodes[nodeToUpgrade];
-		let moneyPotential = HnsCheckMoneyPotential(ns);
-		if (moneyPotential > node.levelCost) {
-			HnsIncreaseMoneyTo(ns, node.levelCost);
-			if (ns.hacknet.upgradeLevel(nodeToUpgrade, 1)) {
-				Vprint(ns, verbose, `Upgraded Level ${node.level}->${node.level+1} on Hacknet Server ` + 
-					`${nodeToUpgrade}, hash gain +${node.levelHashGain.toFixed(5)}, cost of upgrade: ` + 
-					`${FormatMoney(node.levelCost)}, costPerHashGain: ${FormatMoney(node.levelCostPerHashGain)}`);
-			}
-			else
-				Vprint(ns, verbose, `ERROR: Unable to upgrade Level on Hacknet Server ${nodeToUpgrade}`);
-		}
-	}
-	// 2) Upgrade Ram
-	else if (upgradePart == HnsUpgradeParts.Ram && nodeToUpgrade > -1) {
-		let node = nodes[nodeToUpgrade];
-		let moneyPotential = HnsCheckMoneyPotential(ns);
-		if (moneyPotential > node.ramCost) {
-			HnsIncreaseMoneyTo(ns, node.ramCost);
-			if (ns.hacknet.upgradeRam(nodeToUpgrade, 1)) {
-				let ramLog = Math.log2(node.ram);
-				let ramBefore = Math.pow(2, ramLog);
-				let ramAfter = Math.pow(2, ramLog+1);
-				Vprint(ns, verbose, `Upgraded RAM ${ramBefore}->${ramAfter} on Hacknet Server ` + 
-					`${nodeToUpgrade}, hash gain +${node.ramHashGain.toFixed(5)}, cost of upgrade: ` + 
-					`${FormatMoney(node.ramCost)}, costPerHashGain: ${FormatMoney(node.ramCostPerHashGain)}`);
-			}
-			else
-				Vprint(ns, verbose, `ERROR: Unable to upgrade RAM on Hacknet Server ${nodeToUpgrade}`);
-		}		
-	}
-	// 2) Upgrade Cores
-	else if (upgradePart == HnsUpgradeParts.Cores && nodeToUpgrade > -1) {
-		let node = nodes[nodeToUpgrade];
-		let moneyPotential = HnsCheckMoneyPotential(ns);
-		if (moneyPotential > node.coresCost) {
-			HnsIncreaseMoneyTo(ns, node.coresCost);
-			if (ns.hacknet.upgradeCore(nodeToUpgrade, 1)) {
-				Vprint(ns, verbose, `Upgraded Cores ${node.cores}->${node.cores+1} on Hacknet Server ` + 
-					`${nodeToUpgrade}, hash gain +${node.coresHashGain.toFixed(5)}, cost of upgrade: ` + 
-					`${FormatMoney(node.coresCost)}, costPerHashGain: ${FormatMoney(node.coresCostPerHashGain)}`);
-			}
-			else
-				Vprint(ns, verbose, `ERROR: Unable to upgrade Cores on Hacknet Server ${nodeToUpgrade}`);
-		}
-	}
+	
 }
 
 export function GetHacknetNodes(ns) {
@@ -155,6 +72,135 @@ export function HnsAnalyzeNode(ns, index) {
 	node.cacheCost = Math.ceil(hns.cacheUpgradeCost(node.cache, 1));
 
 	return node;
+}
+
+// Determines the ideal next upgrade out of all current Hacknet servers and buys it if there's enough money
+export function HnsUpgradeHacknetServers(ns, verbose) {
+	let nodes = GetHacknetNodes(ns);
+	let minHashGain = Number.MAX_SAFE_INTEGER;
+	let minCache = Number.MAX_SAFE_INTEGER;
+	let nodeToUpgrade = -1;
+	let upgradePart = HnsUpgradeParts.None;
+	let upgradeCost = 0;
+
+	// cycle through nodes and determine next best upgrade
+	for (let i=0; i<nodes.length; i++) {
+		let node = nodes[i];
+		// check level
+		if (node.levelCostPerHashGain < minHashGain) {
+			minHashGain = node.levelCostPerHashGain;
+			nodeToUpgrade = i;
+			upgradePart = HnsUpgradeParts.Level;
+			upgradeCost = node.levelCost;
+		}
+		// check ram
+		if (node.ramCostPerHashGain < minHashGain) {
+			minHashGain = node.ramCostPerHashGain;
+			nodeToUpgrade = i;
+			upgradePart = HnsUpgradeParts.Ram;
+			upgradeCost = node.ramCost;
+		}
+		// check cores
+		if (node.coresCostPerHashGain < minHashGain) {
+			minHashGain = node.coresCostPerHashGain;
+			nodeToUpgrade = i;
+			upgradePart = HnsUpgradeParts.Cores;
+			upgradeCost = node.coresCost;
+		}
+		// check cache (Increase cache size instead of upgrading if hashes > 50% of max)
+		if (ns.hacknet.numHashes() >= ns.hacknet.hashCapacity() * .50) {
+			if (node.cache < minCache) {
+				minCache = node.cache;
+				nodeToUpgrade = i;
+				upgradePart = HnsUpgradeParts.Cache;
+				upgradeCost = node.cacheCost;
+			}
+		}
+	}
+
+	// 1) First, upgrade cache if that's needed
+	if (upgradePart == HnsUpgradeParts.Cache && nodeToUpgrade > -1) {
+		let node = nodes[nodeToUpgrade];
+		let moneyPotential = HnsCheckMoneyPotential(ns);
+		if (moneyPotential > node.cacheCost) {
+			HnsIncreaseMoneyTo(ns, node.cacheCost);
+			let prevCapacity = ns.hacknet.hashCapacity();
+			if (ns.hacknet.upgradeCache(nodeToUpgrade, 1)) {
+				let newCapacity = ns.hacknet.hashCapacity();
+				Vprint(ns, verbose, `Upgraded Cache ${node.cache}->${node.cache+1} on Hacknet Server ` + 
+					`${nodeToUpgrade}, cost of upgrade: ${FormatMoney(node.cacheCost)}, ` +
+					`hash capacity ${prevCapacity}-->${newCapacity}`);
+			}
+			else
+				Vprint(ns, verbose, `ERROR: Unable to upgrade Cache on Hacknet Server ${nodeToUpgrade}`);
+		}
+	}
+	// 2) Buy a new server instead of upgrading when it's less expensive than upgradeCost * costMultiple
+	let newServerCost = ns.hacknet.getPurchaseNodeCost();
+	let costMultiple = 3;	// manually set based on personal preferences (lower=longer wait for new servers)
+	if (newServerCost < upgradeCost * costMultiple) {
+		let moneyPotential = HnsCheckMoneyPotential(ns);
+		Vprint(ns, verbose, `Saving up for a new hacknet server. ` +
+			`${Math.round((moneyPotential / newServerCost) * 100)}% saved so far...`);
+		if (moneyPotential > newServerCost) {
+			HnsIncreaseMoneyTo(ns, newServerCost);
+			if (ns.hacknet.purchaseNode() > -1) {
+				Vprint(ns, verbose, `Purchased new Hacknet Server! ` +
+					`Cost of server: ${FormatMoney(newServerCost)}`);
+			}
+			else
+				Vprint(ns, verbose, `ERROR: Unable to purchase new Hacknet Server for ${FormatMoney(newServerCost)}`);
+		}
+	}
+	// 3) Else, Purchase the Upgrade
+	// 3a) Upgrade Level
+	else if (upgradePart == HnsUpgradeParts.Level && nodeToUpgrade > -1) {
+		let node = nodes[nodeToUpgrade];
+		let moneyPotential = HnsCheckMoneyPotential(ns);
+		if (moneyPotential > node.levelCost) {
+			HnsIncreaseMoneyTo(ns, node.levelCost);
+			if (ns.hacknet.upgradeLevel(nodeToUpgrade, 1)) {
+				Vprint(ns, verbose, `Upgraded Level ${node.level}->${node.level+1} on Hacknet Server ` + 
+					`${nodeToUpgrade}, hash gain +${node.levelHashGain.toFixed(5)}, cost of upgrade: ` + 
+					`${FormatMoney(node.levelCost)}, costPerHashGain: ${FormatMoney(node.levelCostPerHashGain)}`);
+			}
+			else
+				Vprint(ns, verbose, `ERROR: Unable to upgrade Level on Hacknet Server ${nodeToUpgrade}`);
+		}
+	}
+	// 3b) Upgrade Ram
+	else if (upgradePart == HnsUpgradeParts.Ram && nodeToUpgrade > -1) {
+		let node = nodes[nodeToUpgrade];
+		let moneyPotential = HnsCheckMoneyPotential(ns);
+		if (moneyPotential > node.ramCost) {
+			HnsIncreaseMoneyTo(ns, node.ramCost);
+			if (ns.hacknet.upgradeRam(nodeToUpgrade, 1)) {
+				let ramLog = Math.log2(node.ram);
+				let ramBefore = Math.pow(2, ramLog);
+				let ramAfter = Math.pow(2, ramLog+1);
+				Vprint(ns, verbose, `Upgraded RAM ${ramBefore}->${ramAfter} on Hacknet Server ` + 
+					`${nodeToUpgrade}, hash gain +${node.ramHashGain.toFixed(5)}, cost of upgrade: ` + 
+					`${FormatMoney(node.ramCost)}, costPerHashGain: ${FormatMoney(node.ramCostPerHashGain)}`);
+			}
+			else
+				Vprint(ns, verbose, `ERROR: Unable to upgrade RAM on Hacknet Server ${nodeToUpgrade}`);
+		}		
+	}
+	// 3c) Upgrade Cores
+	else if (upgradePart == HnsUpgradeParts.Cores && nodeToUpgrade > -1) {
+		let node = nodes[nodeToUpgrade];
+		let moneyPotential = HnsCheckMoneyPotential(ns);
+		if (moneyPotential > node.coresCost) {
+			HnsIncreaseMoneyTo(ns, node.coresCost);
+			if (ns.hacknet.upgradeCore(nodeToUpgrade, 1)) {
+				Vprint(ns, verbose, `Upgraded Cores ${node.cores}->${node.cores+1} on Hacknet Server ` + 
+					`${nodeToUpgrade}, hash gain +${node.coresHashGain.toFixed(5)}, cost of upgrade: ` + 
+					`${FormatMoney(node.coresCost)}, costPerHashGain: ${FormatMoney(node.coresCostPerHashGain)}`);
+			}
+			else
+				Vprint(ns, verbose, `ERROR: Unable to upgrade Cores on Hacknet Server ${nodeToUpgrade}`);
+		}
+	}
 }
 
 export function HnsHashGainLevel(ns, index) {
