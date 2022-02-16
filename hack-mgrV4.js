@@ -188,7 +188,7 @@ export async function main(ns) {
 		return target;
 	}
 
-	// WEAKEN
+	// *** WEAKEN ***
 	async function Weaken(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting weaken job on ${target.hostname} for ${threadsReq} threads`)
 		let hosts = GetHosts(ns);
@@ -199,23 +199,24 @@ export async function main(ns) {
 				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
 				if (host.hostname.slice(0, 7) == 'hacknet')
 					continue;	// skip hacknet server nodes
-				let maxThreads = CalcMaxThreads(ns, weakenfile, host.hostname);
-				maxThreads = Math.min(threadsReq, maxThreads);
-				if (maxThreads <= 0) {
+				let threads = CalcMaxThreads(ns, weakenfile, host.hostname);
+				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(weakenfile));
+				threads = Math.min(threadsReq, threads, threadsMax);
+				if (threads <= 0) {
 					continue;	// skip host if they can't run weaken
 				}
-				Vprint(ns, verbose, `Trying to run weaken ${host.hostname} => ${target.hostname} with ${maxThreads} threads`);
+				Vprint(ns, verbose, `Trying to run weaken ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
-				if (ns.exec(weakenfile, host.hostname, maxThreads, target.hostname, delay, verbose, id) > 0) {
+				if (ns.exec(weakenfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
 					Vprint(ns, verbose, `Running weaken ${host.hostname} => ${target.hostname} ` + 
-						`| ${maxThreads} of ${threadsReq} threads with ` + 
+						`| ${threads} of ${threadsReq} threads with ` + 
 						`${delay} delay, taking ${(target.weakenTime / 1000 / 60).toFixed(2)} minutes.`);
-					threadsReq -= maxThreads;
+					threadsReq -= threads;
 				}
 				else {
 					Vprint(ns, verbose, `WARNING: Couldnt run Weaken ${host.hostname} => ${target.hostname} ` + 
-						`with ${maxThreads} threads`);
+						`with ${threads} threads`);
 				}
 				if (threadsReq <= 0)
 					break;
@@ -229,7 +230,7 @@ export async function main(ns) {
 		return target;
 	}
 
-	// GROW
+	// *** GROW ***
 	async function Grow(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting Grow job on ${target.hostname} for ${threadsReq} threads`)
 		let hosts = GetHosts(ns);
@@ -243,26 +244,25 @@ export async function main(ns) {
 				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
 				if (host.hostname.slice(0, 7) == 'hacknet')
 					continue;	// skip hacknet server nodes
-				let maxThreads = CalcMaxThreads(ns, growfile, host.hostname);
-				maxThreads = Math.min(threadsReq, maxThreads);
-				if (maxThreads <= 0) {
+				let threads = CalcMaxThreads(ns, growfile, host.hostname);
+				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(growfile));
+				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
+				threads = Math.min(threadsReq, threads, threadsMax, threadsMinPct);
+				if (threads <= 0) {
 					continue;	// skip host if they can't run weaken
 				}
-				else if (maxThreads < threadsReq * minThreadsPct) {
-					continue;	// skip if they can't do at least the min amt of threads
-				}
-				Vprint(ns, verbose, `Trying to run Grow ${host.hostname} => ${target.hostname} with ${maxThreads} threads`);
+				Vprint(ns, verbose, `Trying to run Grow ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
-				if (ns.exec(growfile, host.hostname, maxThreads, target.hostname, delay, verbose, id) > 0) {
+				if (ns.exec(growfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
 					Vprint(ns, verbose, `Running grow ${host.hostname} => ${target.hostname} ` + 
-						`| ${maxThreads} of ${threadsReq} threads with ` + 
+						`| ${threads} of ${threadsReq} threads with ` + 
 						`${delay} delay, taking ${(target.growTime / 1000 / 60).toFixed(2)} minutes.`);
-					threadsReq -= maxThreads;
+					threadsReq -= threads;
 				}
 				else {
 					Vprint(ns, verbose, `WARNING: Couldnt run Grow ${host.hostname} => ${target.hostname} ` + 
-						`with ${maxThreads} threads`);
+						`with ${threads} threads`);
 				}
 				if (threadsReq <= 0)
 					break;
@@ -277,7 +277,7 @@ export async function main(ns) {
 		return target;
 	}
 
-	// HACK
+	// *** HACK ***
 	async function Hack(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting Hack job on ${target.hostname} for ${threadsReq} threads`)
 		let hosts = GetHosts(ns);
@@ -291,28 +291,25 @@ export async function main(ns) {
 				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
 				if (host.hostname.slice(0, 7) == 'hacknet')
 					continue;	// skip hacknet server nodes
-				let maxThreads = CalcMaxThreads(ns, hackfile, host.hostname);
-				maxThreads = Math.min(threadsReq, maxThreads);
-				if (maxThreads <= 0) {
-					// Vprint(ns, verbose, `@@ Hack: SKIPPING ${host.hostname}: not enough maxThreads: ${maxThreads}`);
+				let threads = CalcMaxThreads(ns, hackfile, host.hostname);
+				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(hackfile));
+				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
+				threads = Math.min(threadsReq, threads, threadsMax, threadsMinPct);
+				if (threads <= 0) {
 					continue;	// skip host if they can't run weaken
 				}
-				else if (maxThreads < threadsReq * minThreadsPct) {
-					Vprint(ns, verbose, `@@ Hack: SKIPPING ${host.hostname}: maxThreads: ${maxThreads} < ${threadsReqOrig * minThreadsPct}`);
-					continue;	// skip if they can't do at least the min amt of threads
-				}
-				Vprint(ns, verbose, `Trying to run Hack ${host.hostname} => ${target.hostname} with ${maxThreads} threads`);
+				Vprint(ns, verbose, `Trying to run Hack ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
-				if (ns.exec(hackfile, host.hostname, maxThreads, target.hostname, delay, verbose, id) > 0) {
+				if (ns.exec(hackfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
 					Vprint(ns, verbose, `Running Hack ${host.hostname} => ${target.hostname} ` + 
-						`| ${maxThreads} of ${threadsReq} threads with ` + 
+						`| ${threads} of ${threadsReq} threads with ` + 
 						`${delay} delay, taking ${(target.growTime / 1000 / 60).toFixed(2)} minutes.`);
-					threadsReq -= maxThreads;
+					threadsReq -= threads;
 				}
 				else {
 					Vprint(ns, verbose, `WARNING: Couldnt run Grow ${host.hostname} => ${target.hostname} ` + 
-						`with ${maxThreads} threads`);
+						`with ${threads} threads`);
 				}
 				if (threadsReq <= 0)
 					break;
