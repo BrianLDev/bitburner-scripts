@@ -13,7 +13,7 @@ export async function main(ns) {
 	else
 		mode = "upgrade";
 	verbose = (verbose == true || verbose == "true") ? true : false;
-	let hashCapacityUpgradePct = .70;
+	let hashCapacityUpgradePct = .75;
 	let checkIntervalMs = 5000;
 
 	// TODO: CREATE 3 MODES 1) UPGRADE, 2) HASH, 3) CASH.  DEFAULT TO UPGRADE
@@ -42,7 +42,7 @@ export async function main(ns) {
 				let hashCapacityK = (ns.hacknet.hashCapacity()/1000).toFixed(3);
 				let upgradeK = ((ns.hacknet.hashCapacity() * hashCapacityUpgradePct)/1000).toFixed(3);
 				Vprint(ns, verbose, `Accumulating hashes: ${numHashesK}k / ${hashCapacityK}k ` +
-					` max. Will upgrade max capacity at ${upgradeK}`);
+					`max. Will upgrade max capacity at ${upgradeK}`);
 			}
 		}
 

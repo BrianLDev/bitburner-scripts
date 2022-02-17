@@ -41,6 +41,70 @@ export function GetRootedServers(ns) {
 	return rootedServers;
 }
 
+export function GetPathToTarget(ns, targetname, startingpoint="home") {
+	// uses Breadth First Search to find path to target
+	let toExplore = [];
+	let exploredNames = [];
+	let path = [];
+	let found = false;
+	let start = ns.getServer(startingpoint);
+	start.parent = "root";
+	toExplore.push(start);
+
+	while (!found && toExplore.length > 0) {
+		let server = toExplore.pop();
+		if (server.hostname == targetname) {
+			ns.tprint(`Found target: ${targetname}. Now unwinding to find path to home`)
+			found = true;
+			path = UnwindPath(ns, server);
+			return path;
+		}
+		else if (exploredNames.includes(server.hostname) == false) {
+			exploredNames.push(server.hostname);
+			let children = GetNestedServerObjs(ns, server.hostname);
+			children.forEach(child => {
+				if (!exploredNames.includes(child.hostname)) {
+					child.parent = server;
+					toExplore.push(child);
+				}
+			});
+		}
+	}
+}
+
+export function UnwindPath(ns, serverObject) {
+	// note: this requires additional server data: Server.parent added in GetNestedServerObjs() func
+	let path = [];
+	let reachedEnd = false;
+	while (!reachedEnd) {
+		if (serverObject.parent == "root") {
+			path.unshift(serverObject.hostname);
+			reachedEnd = true;
+			return path;
+		}
+		else {
+			path.unshift(serverObject.hostname);
+			serverObject = serverObject.parent;
+		}
+	}
+}
+
+export function GetNestedServerObjs(ns, servername, parentname="home") {
+	let childnames = ns.scan(servername);
+	let children = [];
+	if (childnames.length > 0) {
+		childnames.forEach(childname => {
+			let so = ns.getServer(childname);
+			if (!so.purchasedByPlayer && childname != parentname && childname != "home")
+				children.push(so);
+		});
+	}
+	if (!children || children == undefined || children == null || !children.length > 0)
+		return [];
+	else
+		return children;
+}
+
 export function OpenPorts(ns, server) {
 	let ports = ns.getServerNumPortsRequired(server);
 	let portsOpened = 0;
@@ -86,26 +150,6 @@ export function GainRootAccess(ns, server) {
 		return false;
 	}
 }
-
-// export async function RunHackScript(ns, filename, server, hackTarget) {
-// 	let threads = CalcMaxThreads(ns, filename, server);
-// 	if (threads > 0) {
-// 		ns.tprint("Running hack script on " + server);
-// 		if (await ns.scp(filename, "home", server) == false) {
-// 			ns.tprint("Error: couldn't copy file on " + server);
-// 			return false;
-// 		}
-// 		ns.killall(server);
-// 		if (await ns.exec(filename, server, threads, hackTarget) == false) {
-// 			ns.tprint("Error: couldn't execute script on " + server);
-// 			return false;
-// 		}
-// 		else {
-// 			return true;
-// 		}
-// 	}
-// }
-
 
 export function CalcJobThreads(ns, target, jobType, hackPct=.50, moneyThresh=0.95, securityThresh=1.05) {
 	const h = ns.formulas.hacking;
