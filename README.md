@@ -1,3 +1,6 @@
 # Bitburner Scripts
-These are misc scripts I've written in JavaScript for the programming related game: Bitburner.
-Feel free to borrow then if they're useful.
+Various scripts I've written for the programming related game: Bitburner.
+
+Feel free to use them if you find them helpful.
+
+Bitburner - https://danielyxie.github.io/bitburner/
