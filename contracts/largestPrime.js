@@ -4,7 +4,7 @@ A prime factor is a factor that is a prime number. What is the largest prime fac
 */
 
 // INPUT
-let x = 174539938;
+let x = 961057682;
 
 // OUTPUT
 let lpf = LargestPrimeFactor(x);
@@ -32,7 +32,7 @@ function PrimeFactors(num) {
   let primeFactors = [];
   factors.forEach(factor => {
     if (IsPrime(factor)) {
-      console.log(`Found prime: ${factor}`)
+      console.log(`...found a prime: ${factor}`)
       primeFactors.push(factor);
     }
   });
@@ -41,8 +41,8 @@ function PrimeFactors(num) {
 
 function LargestPrimeFactor(num) {
   let primeFactors = PrimeFactors(num);
-  primeFactors = primeFactors.filter(factor => factor != num);
   console.log(`Prime factors: ${primeFactors}`)
+  primeFactors = primeFactors.filter(factor => factor != num);
   let lpf = Math.max(...primeFactors);
   return lpf;
 }
