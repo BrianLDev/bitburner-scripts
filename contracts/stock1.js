@@ -9,7 +9,8 @@ Determine the maximum possible profit you can earn using at most one transaction
 
 
 // INPUT
-let prices = [58,16,11,100,72,44,56,4,147,95,150,161,184,50,180,1,161,16,115,171,55,197,93,91,147,194,164,57,61,125,20,16,107,130,38,184,47,70,150,124,12,168,147,105,162,115]
+let prices = 
+[190,157,123,51,16,43,166,106,25,46,17,60,133,5,189,138,19,48,22,41,9,114,18,84,141,19,173,114,90,1,11,10,51,146,19]
 
 // OUTPUT
 let maxProfit = MaxProfit(prices);
@@ -19,7 +20,7 @@ console.log(`Max Profit: ${maxProfit}`);
 function MaxProfit(prices) {
   let maxProfit = 0;
   for (let i=0; i<prices.length-1; i++) {
-    for (let j=1; j<prices.length; j++) {
+    for (let j=i+1; j<prices.length; j++) {
       let tempProfit = prices[j]-prices[i];
       if (tempProfit > maxProfit) {
         console.log(`New max profit: ${prices[j]} - ${prices[i]} = ${tempProfit}`)
