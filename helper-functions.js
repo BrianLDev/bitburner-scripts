@@ -1,4 +1,5 @@
 /** @param {NS} ns **/
+import { JobType } from "constants.js"
 
 // HELPER FUNCTIONS
 export function GetAllServers(ns) {
@@ -54,7 +55,7 @@ export function GetPathToTarget(ns, targetname, startingpoint="home") {
 	while (!found && toExplore.length > 0) {
 		let server = toExplore.pop();
 		if (server.hostname == targetname) {
-			ns.tprint(`Found target: ${targetname}. Now unwinding to find path to home`)
+			// ns.tprint(`Found target: ${targetname}. Now unwinding to find path to home`)
 			found = true;
 			path = UnwindPath(ns, server);
 			return path;
@@ -213,8 +214,8 @@ export function GetTargets(ns, excludePoor=false) {
 	let targetList = []
 	for (let i=0; i<rootedServers.length; i++) {
 		let target = ns.getServer(rootedServers[i]);
-		if (target.hostname.substring(0, 5) == "pserv")
-			continue;	
+		if (target.purchasedByPlayer)
+			continue;	// skip any player owned servers
 		else {
 			// push on to targetList unless excluded by parameters
 			if (excludePoor && target.moneyMax < 1)
@@ -229,7 +230,7 @@ export function GetTargets(ns, excludePoor=false) {
 	return targetList;
 }
 
-export function GetHosts(ns) {
+export function GetHosts(ns, inclHacknet=false) {
 	// NOTE: THIS RETURNS AN ARRAY OF SERVER OBJECTS, NOT JUST THE SERVER HOSTNAME STRINGS
 	let serverList = ns.scan();
 	let rootedServers = GetRootedServers(ns, serverList);
@@ -237,6 +238,8 @@ export function GetHosts(ns) {
 	for (let i=0; i<rootedServers.length; i++) {
 		let host = ns.getServer(rootedServers[i]);
 		host.freeRam = GetFreeRam(ns, host.hostname);
+		if (inclHacknet == false && (host.hostname.slice(0, 7) == 'hacknet'))
+			continue;	// skip hacknet servers
 		if (host.maxRam > 0)
 			hostList.push(host);
 		else
@@ -269,7 +272,6 @@ export function GetNextHost(ns) {
 export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.99, securityThresh=1.01) {
 	// note 1: this takes and returns a Server object
 	// note 2: this requires Formulas.exe
-	// hackEarnRate is $1 per ms
 	const h = ns.formulas.hacking;
 	let player = ns.getPlayer();
 	let simtarget = ns.getServer(target.hostname);	// to use for simulated situations
@@ -284,16 +286,11 @@ export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.99, security
 	target.hackPctPerThread = h.hackPercent(simtarget, player);
 	target.hackExp = h.hackExp(simtarget, player);
 	target.expectedValue = Math.round((simtarget.moneyMax * hackPct * target.hackChance));
-	// Grow stats: assume min security and 50% money
-	simtarget.hackDifficulty = simtarget.minDifficulty * securityThresh;
-	simtarget.moneyAvailable = simtarget.moneyMax * (1-hackPct);
+	// Grow stats:
 	target.growTime = Math.ceil(h.growTime(simtarget, player));
-	// Weaken stats: set security and $ to level after grow x 2
-	let secIncGrow = ns.growthAnalyze(simtarget.hostname, 1/hackPct, 1) * .004; // each thread increases sec by .004
-	simtarget.hackDifficulty = (simtarget.minDifficulty * securityThresh) + secIncGrow;
-	simtarget.moneyAvailable = simtarget.moneyMax * moneyThresh;
+	// Weaken stats:
 	target.weakenTime = Math.ceil(h.weakenTime(simtarget, player));	
-	// calculate hackEarnRate
+	// calculate hackEarnRate ($1 per ms)
 	target.hackEarnRate = Math.round(target.expectedValue / target.weakenTime);	// weaken time is the longest of the 3
 	return target;
 }
@@ -364,22 +361,12 @@ export function KillAllRemote(ns) {
 	ns.tprint("Done. Killed " + killed  + " scripts on remote servers.");
 }
 
-export const Corporations = ['4sigma', 'b-and-a', 'blade', 'clarkinc', 'ecorp', 'fulcrumtech', 'fulcrumassets', 
-	'kuai-gong', 'megacorp', 'nwo', 'omnitek'];
-export const Gyms = ['crush-fitness', 'iron-gym', 'millenium-fitness', 'powerhouse-fitness', 'snap-fitness'];
-export const Universities = ['rothman-uni', 'zb-institute', 'summit-uni'];
-export const Tech = ['alpha-ent', 'blade', 'comptek', 'galactic-cyber', 'microdyne', 'fulcrumtech', 'stormtech', 'omnitek']
-export const Sector12 = ['foodnstuff', 'joesguns', '4sigma', 'CSEC', 'rothman-uni', 'deltaone', 'univ-energy', 
-	'icarus', 'iron-gym', 'alpha-ent', 'powerhouse-fitness', 'megacorp', 'blade']
 
-export const JobType = {
-	weaken: 'weaken',
-	grow: 'grow',
-	hack: 'hack',
-	none: 'none'
-};
 
 export function Vprint(ns, verbose, string) {
+	if ((string instanceof String == false) || (typeof string != 'string'))
+		string = string.toString();
+	
 	if (verbose) {
 		ns.tprint(string);
 		ns.print(string);

@@ -1,5 +1,5 @@
 /** @param {NS} ns **/
-import { GetTargets, FormatTabs, FormatMoney} from "helper-functions.js";
+import { GetTargets, FormatMoney} from "helper-functions.js";
 
 export async function main(ns) {
 
@@ -14,12 +14,10 @@ export function PrintTargets(ns) {
 	ns.tprint("SERVER\t\t\tMONEY AVAIL \/ MAX\t\tSEC. CURR => MIN\tMINUTES\t\tEARN RATE");
 	ns.tprint("_______________\t\_________________________\t\________________\t\________\t\_________");
 	targetList.forEach(target => {
-		let tabs1 = FormatTabs(target.hostname);
-		let tabs2 = FormatTabs(Math.round(target.hackDifficulty) + " => " + target.minDifficulty, 8, 14);
-		ns.tprint(target.hostname + tabs1 + 
-			FormatMoney(target.moneyAvailable) + " / " + FormatMoney(target.moneyMax) + "\t\t" +
-			Math.round(target.hackDifficulty) + " => " + target.minDifficulty+ tabs2 + 
-			(target.weakenTime/1000/60).toFixed(1) + "\t\t" +
+		ns.tprint(target.hostname.padEnd(23) + 
+			`${FormatMoney(target.moneyAvailable)} / ${FormatMoney(target.moneyMax)}`.padEnd(32) +
+			`${Math.round(target.hackDifficulty)} => ${Math.round(target.minDifficulty)}`.padEnd(24) + 
+			(target.weakenTime/1000/60).toFixed(1).padEnd(16) +
 			target.hackEarnRate);
 	});
 

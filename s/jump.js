@@ -9,7 +9,7 @@ export async function main(ns) {
 	}
 
 	let path = GetPathToTarget(ns, target, "home")
-	ns.tprint(`Path => ${path}`);
+	ns.tprint(`Connecting via path => ${path}`);
 	ConnectByPath(ns, path);
 }
 
@@ -21,9 +21,9 @@ export function ConnectByPath(ns, path) {
 		if (ns.getCurrentServer() != path[i])
 			ns.tprint(`ERROR: Was not able to connect from ${path[i-1]} to ${path[i]} using path: ${path}`);
 	}
-	if (ns.getCurrentServer() == destination)
-		ns.tprint(`Done!  Successfully connected to ${destination}`);
-	else
+	if (ns.getCurrentServer() != destination)
 		ns.tprint(`ERROR: Was not able to connect from to ${destination} using path: ${path}`);
+	// else
+	// 	ns.tprint(`Successfully connected to ${destination}`);
 
 }

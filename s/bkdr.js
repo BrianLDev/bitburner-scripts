@@ -1,6 +1,6 @@
 /** @param {NS} ns **/
 import { GetAllServers, Vprint } from "helper-functions.js"
-import { Corporations, Gyms, Universities, Tech, Sector12 } from "helper-functions.js"
+import * as c from "constants.js";
 
 export async function main(ns) {
 	let targets = ns.args[0];
@@ -11,16 +11,16 @@ export async function main(ns) {
 		targets = PrimaryTargets;
 	else if (targets == "all")
 		targets = GetAllServers(ns);
-	else if (targets == "corps")
-		targets = Corporations;
+	else if (targets == "corps" || targets == "megacorps" || targets == "corporations")
+		targets = c.Corporations;
 	else if (targets == "gyms")
-		targets = Gyms;
-	else if (targets == "universities")
-		targets = Universities;
+		targets = c.Gyms;
+	else if (targets == "universities" || targets == "unis" || targets == "uni")
+		targets = c.Universities;
 	else if (targets == "tech")
-		targets = Tech;
-	else if (targets == "sector12")
-		targets = Sector12;
+		targets = c.Tech;
+	else if (targets == "sector12" || targets == "sector-12")
+		targets = c.Sector12;
 	else
 		targets = PrimaryTargets;
 

@@ -83,8 +83,8 @@ export function HnsUpgradeHacknetServers(ns, verbose) {
 			upgradePart = hn.HnsUpgradeParts.Cores;
 			upgradeCost = node.coresCost;
 		}
-		// check cache (Increase cache size instead of upgrading if hashes > 50% of max)
-		if (ns.hacknet.numHashes() >= ns.hacknet.hashCapacity() * hashCapacityUpgradePct) {
+		// check cache (Increase cache size instead of upgrading if hashes > 75% of max)
+		if (ns.hacknet.numHashes() >= ns.hacknet.hashCapacity() * .75) {
 			if (node.cache < minCache) {
 				minCache = node.cache;
 				nodeToUpgrade = i;

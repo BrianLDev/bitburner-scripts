@@ -1,6 +1,7 @@
 /** @param {NS} ns **/
-import { GetTargets, GetHosts, HostsMaxRam, HostsFreeRam, CalcMaxThreads, CalcJobThreads } from "helper-functions.js"
-import { AnalyzeTarget, CalcRamRequired, CopyHackFilesToHost, JobType, Vprint} from "helper-functions.js"
+import { GetTargets, GetHosts, HostsMaxRam, HostsFreeRam, CalcRamRequired } from "helper-functions.js"
+import { AnalyzeTarget, CalcMaxThreads, CalcJobThreads, CopyHackFilesToHost, Vprint} from "helper-functions.js"
+import { JobType } from "constants.js"
 
 // NOTE: Date.now() is added at the end of all exec functions because for some reason the game requires all
 // scripts to have unique arguments in order to run.  This will prevent hangups from running hack/grow/weaken
@@ -24,7 +25,7 @@ export async function main(ns) {
 	verbose = (verbose == true || verbose == "true") ? true : false;
 
 	if (hackPct == null || hackPct == NaN)
-		hackPct = .40;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
+		hackPct = .30;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
 	if (maxMinutes == null || maxMinutes == NaN)
 		maxMinutes = 4;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
 	
@@ -62,18 +63,21 @@ export async function main(ns) {
 		}
 		// AnalyzeTarget adds lots of useful data and properties to target object
 		target = AnalyzeTarget(ns, target, hackPct, moneyThresh, securityThresh);
+		Vprint(ns, verbose, `🎯 Target selected: 🎯${target.hostname}🎯`);
 
 		// PREPARE TARGET FOR HACKBATCH (Get $ to moneyThresh, security to security Thresh if needed)
-		let batchDelay = 0;
-		batchDelay = await PrepareTarget(target);
-		await ns.sleep(2000);
+		let preparationTime = 0;
+		preparationTime = await PrepareTarget(target);
+		Vprint(ns, verbose, `Waiting until preparation complete for efficient batches: ` +
+			`${(preparationTime/1000/60).toFixed(1)} min`);
+		await ns.sleep(preparationTime);
 
 		let totalMaxRam = HostsMaxRam(ns);
 		let totalFreeRam = HostsFreeRam(ns);
 		// HACKBATCH LOOP
 		while (batchesToRun > 0) {
 			// HACKBATCH
-			target = await HackBatch(target, batchDelay);	// Batch: Hack -> Weaken -> Grow -> Weaken
+			target = await HackBatch(target, 10);	// Batch: Hack -> Weaken -> Grow -> Weaken
 			batchesToRun--;
 
 			// Check that there's enough total ram to run at least 1 full hack batch
@@ -87,7 +91,7 @@ export async function main(ns) {
 			// Check that there's enough free ram to run another batch, if not, wait.
 			totalFreeRam = HostsFreeRam(ns);
 			while (totalFreeRam < target.batchRamReq * 1.5) {
-				let waitSeconds = 3;
+				let waitSeconds = 5;
 				Vprint(ns, verbose, `!!!! Not enough free RAM to run full batch, waiting ${waitSeconds} seconds...`);
 				await ns.sleep(waitSeconds * 1000);
 				totalFreeRam = HostsFreeRam(ns);
@@ -97,6 +101,10 @@ export async function main(ns) {
 		}
 
 		if (target.batchRamReq > 0) {
+			// Calcs the max number of batches that can be run based on total free ram * multiple
+			// After all batches * multiple are done, hackmgr will "prepare" target to max $$/min sec
+			// Higher multiples are better for fast batches (under 5 min), lower multiples for slow batches
+			let multiple = (15*60*1000) / target.weakenTime; // e.g. if weakenTime is 3 min, multiple = 15/3=5
 			batchesToRun = Math.max(Math.floor(totalMaxRam / target.batchRamReq), 1);
 			Vprint(ns, verbose, `--- Updating Batch count to ${batchesToRun} (${target.batchRamReq} RAM req vs ${totalFreeRam} RAM avail.`);
 		}	
@@ -143,7 +151,7 @@ export async function main(ns) {
 	}
 
 	async function HackBatch(target, batchDelay=1) {
-		Vprint(`~~ BEGINNING HACK BATCH ON: ${target.hostname}`);
+		Vprint(ns, verbose, `~~ BEGINNING HACK BATCH ON: ${target.hostname}`);
 		// TODO: MAKE SURE THERE'S ENOUGH FREE RAM TO RUN A FULL BATCH, OTHERWISE DELAY
 		// IF ITS NOT EVEN POSSIBLE TO RUN 1 FULL BATCH ON AVAILABLE HOSTS MAX RAM, QUIT WITH ERROR MESSAGE
 		// OR POSSIBLY CHOOSE A DIFFERENT TARGET? (YEAH, THIS SHOULD BE PART OF THE TARGET SELECTION PROCESS)
@@ -191,20 +199,16 @@ export async function main(ns) {
 	// *** WEAKEN ***
 	async function Weaken(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting weaken job on ${target.hostname} for ${threadsReq} threads`)
-		let hosts = GetHosts(ns);
-		hosts.sort((a, b) => a.maxRam > b.maxRam ? 1 : -1);	// sort by lowest max ram first so lame hosts do weaken
+		let hosts = GetHosts(ns, false);
+		// hosts.sort((a, b) => a.maxRam > b.maxRam ? 1 : -1);	// sort by lowest max ram first so lame hosts do weaken
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
-				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
-				if (host.hostname.slice(0, 7) == 'hacknet')
-					continue;	// skip hacknet server nodes
 				let threads = CalcMaxThreads(ns, weakenfile, host.hostname);
 				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(weakenfile));
 				threads = Math.min(threadsReq, threads, threadsMax);
-				if (threads <= 0) {
-					continue;	// skip host if they can't run weaken
-				}
+				if (threads <= 0)
+					continue;	// skip this host if they can't run weaken
 				Vprint(ns, verbose, `Trying to run weaken ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
@@ -233,24 +237,20 @@ export async function main(ns) {
 	// *** GROW ***
 	async function Grow(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting Grow job on ${target.hostname} for ${threadsReq} threads`)
-		let hosts = GetHosts(ns);
+		let hosts = GetHosts(ns, false);
 		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram first
 		const threadsReqOrig = threadsReq;	// to calc security increase after job complete
 		let minThreadsPct = .20;	// the min % of original threads per job. Avoids messy spreads
-		// TODO: MAKE SURE MINTHREADSPCT STILL WORKS IN EARLY GAME WHEN RAM IS TINY
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
-				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
-				if (host.hostname.slice(0, 7) == 'hacknet')
-					continue;	// skip hacknet server nodes
 				let threads = CalcMaxThreads(ns, growfile, host.hostname);
-				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(growfile));
+				let threadsMax = Math.floor((host.maxRam-1) / ns.getScriptRam(growfile));
 				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
-				threads = Math.min(threadsReq, threads, threadsMax, threadsMinPct);
-				if (threads <= 0) {
-					continue;	// skip host if they can't run weaken
-				}
+				threads = Math.max(threads, threadsMinPct);
+				threads = Math.min(threadsReq, threads, threadsMax);
+				if (threads <= 0)
+					continue;	// skip this host if they can't run weaken
 				Vprint(ns, verbose, `Trying to run Grow ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
@@ -280,7 +280,7 @@ export async function main(ns) {
 	// *** HACK ***
 	async function Hack(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting Hack job on ${target.hostname} for ${threadsReq} threads`)
-		let hosts = GetHosts(ns);
+		let hosts = GetHosts(ns, false);
 		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram first
 		const threadsReqOrig = threadsReq;	// to calc security increase after job complete
 		let minThreadsPct = .40;	// the min % of original threads per job. Avoids messy spreads
@@ -288,16 +288,13 @@ export async function main(ns) {
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
-				// TODO: ADD OPTION TO ALLOW HACKNET SERVERS IF WANTED
-				if (host.hostname.slice(0, 7) == 'hacknet')
-					continue;	// skip hacknet server nodes
 				let threads = CalcMaxThreads(ns, hackfile, host.hostname);
-				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(hackfile));
+				let threadsMax = Math.floor((host.maxRam-1) / ns.getScriptRam(hackfile));
 				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
-				threads = Math.min(threadsReq, threads, threadsMax, threadsMinPct);
-				if (threads <= 0) {
-					continue;	// skip host if they can't run weaken
-				}
+				threads = Math.max(threads, threadsMinPct);
+				threads = Math.min(threadsReq, threads, threadsMax);
+				if (threads <= 0)
+					continue;	// skip this host if they can't run weaken
 				Vprint(ns, verbose, `Trying to run Hack ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
