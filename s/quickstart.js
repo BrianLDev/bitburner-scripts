@@ -3,6 +3,17 @@ import * as c from "constants.js"
 
 export async function main(ns) {
 	// NOTE: ASSUMES LATEGAME WITH LOTS OF MONEY COMING IN AFTER REBOOT (GANGS/CORPS)
+	// TODO: CODE ALTERNATE PATH FOR EARLY GAME WITH NO MONEY
+	// TODO: MAKE SURE ENOUGH MONEY AVAILABLE TO PURCHASE TOR AND PROGRAMS
+
+}
+
+export async function QuickstartEarlyGame(ns) {
+	
+}
+
+export async function QuickstartEndGame(ns) {
+	// NOTE: ASSUMES LATEGAME WITH LOTS OF MONEY COMING IN AFTER REBOOT (GANGS/CORPS)
 	// TODO: MAKE SURE ENOUGH MONEY AVAILABLE TO PURCHASE TOR AND PROGRAMS
 	ns.universityCourse("Rothman University", "Algorithms", false);
 	ns.purchaseTor();

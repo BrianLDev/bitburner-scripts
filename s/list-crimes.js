@@ -1,5 +1,6 @@
 /** @param {NS} ns **/
 import { GetCrimes } from "s/sing-functions.js"
+import { Crimes } from "constants.js"
 
 export async function main(ns) {
 

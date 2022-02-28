@@ -8,11 +8,14 @@ import { JobType } from "constants.js"
 // more than once on a host
 
 /* TODO IMPROVEMENTS:
-- Makes some good money but has room for improvement.
+- Makes good money but has room for improvement.
+- Improve to target 2 servers when RAM is sufficient.  Alternating 1 batch per target will avoid overlap.
 - Timing seems to be off a bit and target money/security don't always restore after each batch.
 	- batch overlap is a common problem according to others
 	- probably need to log timestamps of when each script is scheduled and completed to see whats off
 	- also double check the time calculator functions on the simulated server object
+	- isolate by running 1 hack sequence with full verbose log output and check calc times vs actual
+	- compare times using browser vs. Steam.  Some comments on Discord chat hint that they're different
 	- also need to watch out for gaining hack levels (which shortens up times). hard to handle this one.
 - other misc TODOS (search)
 */
@@ -58,8 +61,9 @@ export async function main(ns) {
 			target = ns.getServer(specificTarget);	// swap to user defined target if in args
 		else {
 			let targets = GetTargets(ns, true);		// get target sorted by max hackEarnRate
-			let filteredTargets = targets.filter(target => target.weakenTime/1000/60 < maxMinutes);
-			target = filteredTargets[0]
+			let filteredTargets = targets.filter(target => target.isHackable === true);
+			filteredTargets = filteredTargets.filter(target => target.weakenTime/1000/60 < maxMinutes);
+			target = filteredTargets[0];
 		}
 		// AnalyzeTarget adds lots of useful data and properties to target object
 		target = AnalyzeTarget(ns, target, hackPct, moneyThresh, securityThresh);
@@ -83,14 +87,13 @@ export async function main(ns) {
 			// Check that there's enough total ram to run at least 1 full hack batch
 			// TODO: MOVE THESE RAM CHECKS TO BEFORE 1ST BATCH IF POSSIBLE
 			totalMaxRam = HostsMaxRam(ns);
-			if (totalMaxRam < target.batchRamReq * 2) {
-				ns.tprint(`ERROR: not enough total RAM to run 2 complete batches: ${totalMaxRam} vs ${target.batchRamReq}`);
-				ns.tprint(`Change target to one with a lower time/thread requirement.`);
-				await ns.exit();
+			if (totalMaxRam < target.batchRamReq) {
+				ns.tprint(`WARNING: not enough total RAM to run 1 complete batch: ${totalMaxRam} vs ${target.batchRamReq}`);
+				ns.tprint(`Buy more RAM or change target to one with a lower time/thread requirement.`);
 			}
 			// Check that there's enough free ram to run another batch, if not, wait.
 			totalFreeRam = HostsFreeRam(ns);
-			while (totalFreeRam < target.batchRamReq * 1.5) {
+			while (totalFreeRam < target.batchRamReq * 1.2) {
 				let waitSeconds = 5;
 				Vprint(ns, verbose, `!!!! Not enough free RAM to run full batch, waiting ${waitSeconds} seconds...`);
 				await ns.sleep(waitSeconds * 1000);

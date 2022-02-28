@@ -10,9 +10,9 @@ export async function main(ns) {
 	if (timeCushion == null || timeCushion == NaN)
 		timeCushion = 1000;
 
-	let runtime = ns.commitCrime(crime);
 
 	while(true) {
+		let runtime = ns.commitCrime(crime);
 		await ns.sleep(runtime + timeCushion);
 	}
 }

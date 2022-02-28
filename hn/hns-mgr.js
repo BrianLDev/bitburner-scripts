@@ -2,6 +2,8 @@
 import * as hn from "/hn/hn-helper.js"
 import { Vprint, FormatMoney } from "helper-functions.js"
 
+// TODO: ADD OPTION TO SPEND ALL AVAILABLE MONEY FOR AN INSTANTANEOUS UPGRADE INSTEAD OF INCREMENTAL OVER TIME
+
 export async function main(ns) {
 	let mode = ns.args[0];
 	let verbose = ns.args[1];

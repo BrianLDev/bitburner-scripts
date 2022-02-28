@@ -276,6 +276,7 @@ export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.99, security
 	let player = ns.getPlayer();
 	let simtarget = ns.getServer(target.hostname);	// to use for simulated situations
 
+	target.isHackable = target.requiredHackingSkill <= player.hacking;
 	target.isWeakened = target.hackDifficulty <= target.minDifficulty * securityThresh;
 	target.isGrown = target.moneyAvailable >= target.moneyMax * moneyThresh;
 	// Hack stats: set security and $ to levels prepared for hack
