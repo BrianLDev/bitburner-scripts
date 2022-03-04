@@ -16,13 +16,14 @@ export async function main(ns) {
 		mode = "upgrade";
 	verbose = (verbose == true || verbose == "true") ? true : false;
 	let hashCapacityUpgradePct = .75;
-	let checkIntervalMs = 5000;
+	let waitIntervalMs = 1;
 
 	// TODO: CREATE 3 MODES 1) UPGRADE, 2) HASH, 3) CASH.  DEFAULT TO UPGRADE
 
 	while (true) {
+		let upgradeCost = 0;
 		if (mode == "upgrade")
-			HnsUpgradeHacknetServers(ns, verbose);
+			upgradeCost = HnsUpgradeHacknetServers(ns, verbose);
 		else if (mode == "cash")
 			hn.HnsGetMoney(ns, Number.MAX_SAFE_INTEGER);
 		else if (mode == "hash") {
@@ -47,8 +48,13 @@ export async function main(ns) {
 					`max. Will upgrade max capacity at ${upgradeK}`);
 			}
 		}
+		let costMultiple = upgradeCost / ns.getServerMoneyAvailable("home");
+		if (costMultiple <= 1)
+			waitIntervalMs = 1
+		else
+			waitIntervalMs = 5000 * costMultiple;
 
-		await ns.sleep(checkIntervalMs);
+		await ns.sleep(waitIntervalMs);
 	}
 }
 
@@ -166,4 +172,5 @@ export function HnsUpgradeHacknetServers(ns, verbose) {
 				Vprint(ns, verbose, `ERROR: Unable to upgrade Cores on Hacknet Server ${nodeToUpgrade}`);
 		}
 	}
+	return upgradeCost;
 }

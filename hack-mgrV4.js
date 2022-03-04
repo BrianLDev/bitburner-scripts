@@ -93,7 +93,7 @@ export async function main(ns) {
 			}
 			// Check that there's enough free ram to run another batch, if not, wait.
 			totalFreeRam = HostsFreeRam(ns);
-			while (totalFreeRam < target.batchRamReq * 1.2) {
+			while (totalFreeRam < target.batchRamReq) {
 				let waitSeconds = 5;
 				Vprint(ns, verbose, `!!!! Not enough free RAM to run full batch, waiting ${waitSeconds} seconds...`);
 				await ns.sleep(waitSeconds * 1000);
