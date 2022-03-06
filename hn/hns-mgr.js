@@ -16,9 +16,7 @@ export async function main(ns) {
 		mode = "upgrade";
 	verbose = (verbose == true || verbose == "true") ? true : false;
 	let hashCapacityUpgradePct = .75;
-	let waitIntervalMs = 1;
-
-	// TODO: CREATE 3 MODES 1) UPGRADE, 2) HASH, 3) CASH.  DEFAULT TO UPGRADE
+	let waitIntervalMs = 100;
 
 	while (true) {
 		let upgradeCost = 0;
@@ -27,6 +25,7 @@ export async function main(ns) {
 		else if (mode == "cash")
 			hn.HnsGetMoney(ns, Number.MAX_SAFE_INTEGER);
 		else if (mode == "hash") {
+			waitIntervalMs = 5000;
 			if (ns.hacknet.numHashes() >= ns.hacknet.hashCapacity() * hashCapacityUpgradePct) {
 				let nodes = hn.GetHacknetNodes(ns);
 				let nodeToUpgrade = -1;
@@ -50,9 +49,9 @@ export async function main(ns) {
 		}
 		let costMultiple = upgradeCost / ns.getServerMoneyAvailable("home");
 		if (costMultiple <= 1)
-			waitIntervalMs = 1
+			waitIntervalMs = 1;	// buy everything now!
 		else
-			waitIntervalMs = 5000 * costMultiple;
+			waitIntervalMs = 5000;
 
 		await ns.sleep(waitIntervalMs);
 	}
