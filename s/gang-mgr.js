@@ -3,8 +3,9 @@ import { Vprint } from "helper-functions.js"
 
 export async function main(ns) {
 	const g = ns.gang;
-	const TARGET_AVG_STATS =75;
-	const ASCEND_MULT = 1.10;	// Ascend when multiplers will grow by this much
+	const TARGET_AVG_STATS = 75;
+	const ASCEND_MULT = 1.20;	// Ascend when multiplers will grow by this much
+	const LOOP_SLEEP = 5000;
 	let verbose = true;	// TODO: UPDATE THIS LATER
 
 	let gangInfo, gangMembers, gangTasks;
@@ -33,17 +34,42 @@ export async function main(ns) {
 			else {
 				// TODO: ASSIGN TASKS DYNAMICALLY DEPENDING ON STATS
 				let random = Math.random();
-				if (random <= .9) {
+				if (gangInfo.territory < 0.9 && random <= .1) {
+					g.setMemberTask(m.name, GangTasks.TERRITORY_WARFARE);
+				}
+				else {
 					if (m.earnedRespect < 5000 * m.avgMult)
 						g.setMemberTask(m.name, GangTasks.TERRORISM);
 					else
 						g.setMemberTask(m.name, GangTasks.HUMAN_TRAFFICKING);
 				}
-				else
-					g.setMemberTask(m.name, GangTasks.TERRITORY_WARFARE);
 			}
 
 			// BUY WEAPONS AND AUGS
+			// TODO: BUY AUGS
+			// TODO: BUY WEAPONS IN EARLY GAME
+			let equipAugs = GetGangEquipment(ns, true);
+			let equip = GetGangEquipment(ns, false)	// excludes augs
+			// equip = // TODO: FILTER BASED ON UNOWNED
+			let augs = equipAugs.filter(e => e.type == EquipType.AUG);
+			// augs = // TODO: FILTER BASED ON UNOWNED
+			let totalEquipCost = 0;
+			equip.forEach(e => totalEquipCost += e.cost);
+			let totalAugsCost = 0;
+			augs.forEach(e => totalAugsCost += e.cost);
+			
+			// Buy Augs (late game)
+			if (gangInfo.moneyGainRate > totalAugsCost) {
+				augs.forEach(aug => {
+					g.purchaseEquipment(m.name, aug.name);
+				});
+			}
+			// Buy Equip (late game)
+			if (gangInfo.moneyGainRate > totalEquipCost) {
+				equip.forEach(e => {
+					g.purchaseEquipment(m.name, e.name);
+				});
+			}
 
 
 			// ASCENSION
@@ -61,7 +87,8 @@ export async function main(ns) {
 
 		// GANG WARFARE
 		if (!gangInfo.territoryWarfareEngaged) {
-			// have to do some gymnastics here to get a messy object into a clean array
+			gangInfo = g.getGangInformation();
+			// have to do gymnastics here to convert messy object w/ magic strings into a clean array
 			let otherGangs = g.getOtherGangInformation();
 			let otherGangsArr = Object.entries(otherGangs);
 			let declareWar = true;
@@ -77,8 +104,7 @@ export async function main(ns) {
 		}
 		
 		// END OF LOOP
-		await ns.sleep(5000);
-		// ns.exit();	// TODO: REMOVE LATER
+		await ns.sleep(LOOP_SLEEP);
 	}
 }
 
@@ -146,6 +172,32 @@ export const GangTasks = {
 	TRAIN_HACKING : "Train Hacking",
 	TRAIN_CHARISMA : "Train Charisma",
 	TERRITORY_WARFARE : "Territory Warfare",
+}
+
+export function GetGangEquipment(ns, includeAugs=true) {
+	const g = ns.gang;
+	let equipNames = g.getEquipmentNames();
+	let equip = [];
+	equipNames.forEach(name => {
+		let e = {};
+		e.name = name;
+		e.type = g.getEquipmentType(name);
+		e.cost = g.getEquipmentCost(name);
+		e.stats = g.getEquipmentStats(name);
+		if (e.type != EquipType.AUG)
+			equip.push(e);
+		else if (e.type == EquipType.AUG && includeAugs == true)
+			equip.push(e);
+	});
+	return equip;
+}
+
+export const EquipType = {
+	WEAPON : 'Weapon',
+	ARMOR : 'Armor',
+	VEHICLE : 'Vehicle',
+	ROOTKIT : 'Rootkit',
+	AUG : 'Augmentation'
 }
 
 export const GangNames = [

@@ -11,7 +11,8 @@ export async function main(ns) {
 	let sharePower = ns.getSharePower();
 	Vprint(ns, verbose, `Total share power boosted at start: ${sharePower}`);
 	let hosts = GetHosts(ns);
-	hosts.sort((a, b) => a.maxRam > b.maxRam ? 1 : -1);	// sort by lowest max ram to most
+	// sort by lowest max ram first to put weak servers to work
+	hosts.sort((a, b) => a.maxRam > b.maxRam ? 1 : -1);
 
 	while(true) {
 		for (let i=0; i < hosts.length; i++) {
@@ -22,6 +23,8 @@ export async function main(ns) {
 				let hostObj = hosts[i];
 				if (hostObj.hostname.slice(0, 7) == 'hacknet')
 					continue;	// skip hacknet server nodes
+				if (hostObj.hostname == 'home')
+					continue;	// skip home  to allow extre cores to grow/weaken
 				await ns.scp(sharefile, "home", hostObj.hostname);
 				let threads = CalcMaxThreads(ns, sharefile, hostObj.hostname);
 				if (threads <= 0)

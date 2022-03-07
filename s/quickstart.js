@@ -6,6 +6,8 @@ export async function main(ns) {
 	// TODO: CODE ALTERNATE PATH FOR EARLY GAME WITH NO MONEY
 	// TODO: MAKE SURE ENOUGH MONEY AVAILABLE TO PURCHASE TOR AND PROGRAMS
 
+	await QuickstartEndGame(ns);
+
 }
 
 export async function QuickstartEarlyGame(ns) {
