@@ -368,17 +368,17 @@ export function Vprint(ns, verbose, string) {
 	if ((string instanceof String == false) || (typeof string != 'string'))
 		string = string.toString();	
 
-	// get timestamp
-	let timestamp = new Date(Date.now());
-	timestamp = startTime.toLocaleTimeString('en-US');
+	// get timestamp and combine with string
+	let timestamp = new Date(Date.now()).toLocaleTimeString('en-US');
+	string = `${timestamp}: ${string}`;
 	
 	// print to terminal if verbose == true, always print to log
 	if (verbose) {
-		ns.tprint(`${timestamp}: ${string}`);
-		ns.print(`${timestamp}: ${string}`);
+		ns.tprint(string);
+		ns.print(string);
 	}
 	else
-		ns.print(`${timestamp}: ${string}`);
+		ns.print(string);
 }
 
 export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {
