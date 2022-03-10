@@ -363,17 +363,22 @@ export function KillAllRemote(ns) {
 }
 
 
-
 export function Vprint(ns, verbose, string) {
+	// ensure that input is in string format
 	if ((string instanceof String == false) || (typeof string != 'string'))
-		string = string.toString();
+		string = string.toString();	
+
+	// get timestamp
+	let timestamp = new Date(Date.now());
+	timestamp = startTime.toLocaleTimeString('en-US');
 	
+	// print to terminal if verbose == true, always print to log
 	if (verbose) {
-		ns.tprint(string);
-		ns.print(string);
+		ns.tprint(`${timestamp}: ${string}`);
+		ns.print(`${timestamp}: ${string}`);
 	}
 	else
-		ns.print(string);
+		ns.print(`${timestamp}: ${string}`);
 }
 
 export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {

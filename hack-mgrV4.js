@@ -109,6 +109,7 @@ export async function main(ns) {
 			// Higher multiples are better for fast batches (under 5 min), lower multiples for slow batches
 			let multiple = (15*60*1000) / target.weakenTime; // e.g. if weakenTime is 3 min, multiple = 15/3=5
 			batchesToRun = Math.max(Math.floor(totalMaxRam / target.batchRamReq), 1);
+			batchesToRun = Math.min (batchesToRun, 1000);	// cap at 1000 runs before restart
 			Vprint(ns, verbose, `--- Updating Batch count to ${batchesToRun} (${target.batchRamReq} RAM req vs ${totalFreeRam} RAM avail.`);
 		}	
 		
