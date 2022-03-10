@@ -370,7 +370,7 @@ export function Vprint(ns, verbose, string) {
 
 	// get timestamp and combine with string
 	let timestamp = new Date(Date.now()).toLocaleTimeString('en-US');
-	string = `${timestamp}: ${string}`;
+	string = `[${timestamp}] ${string}`;
 	
 	// print to terminal if verbose == true, always print to log
 	if (verbose) {

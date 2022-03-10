@@ -11,21 +11,19 @@ export async function main(ns) {
 	else if (!sleeptime)
 		ns.tprint("Error: missing sleeptime");
 	else {
-		let startTime = new Date(Date.now());
-		startTime = startTime.toLocaleTimeString('en-US');
+		let startTime = new Date(Date.now()).toLocaleTimeString('en-US');
 		if (verbose)
-			ns.tprint(`${startTime}: 💻HACK💻 schdeuled ${ns.getHostname()} => ${targetName}`);
+			ns.tprint(`[${startTime}] 💻HACK💻 schdeuled ${ns.getHostname()} => ${targetName}`);
 		
 		await ns.sleep(sleeptime);
 		let profit = await ns.hack(targetName);
 
 		if (verbose == true) {
-			let endTime = new Date(Date.now());
-			endTime = endTime.toLocaleTimeString('en-US');
+			let endTime = new Date(Date.now()).toLocaleTimeString('en-US');
 			if (profit > 0)
-				ns.tprint(`${endTime}: 💰HACK💰 successful ${ns.getHostname()} => ${targetName} for \$${(profit/1000000).toFixed(2)}m`);
+				ns.tprint(`[${endTime}] 💰HACK💰 successful ${ns.getHostname()} => ${targetName} for \$${(profit/1000000).toFixed(2)}m`);
 			else
-				ns.tprint(`${endTime}: ❌HACK❌ failed ${ns.getHostname()} => ${targetName}`);
+				ns.tprint(`[${endTime}] ❌HACK❌ failed ${ns.getHostname()} => ${targetName}`);
 		}
 	}
 }
