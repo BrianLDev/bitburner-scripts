@@ -291,8 +291,9 @@ export function AnalyzeTarget(ns, target, hackPct=.50, moneyThresh=.99, security
 	target.growTime = Math.ceil(h.growTime(simtarget, player));
 	// Weaken stats:
 	target.weakenTime = Math.ceil(h.weakenTime(simtarget, player));	
-	// calculate hackEarnRate ($1 per ms)
-	target.hackEarnRate = Math.round(target.expectedValue / target.weakenTime);	// weaken time is the longest of the 3
+	// calculate hackEarnRate ($1 per s)
+	let cushion = 350;
+	target.hackEarnRate = Math.round(target.expectedValue / ((target.weakenTime + cushion) / 1000));	// weaken time is the longest of the 3
 	return target;
 }
 

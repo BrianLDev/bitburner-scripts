@@ -18,9 +18,9 @@ export function PrintTargets(ns) {
 		ns.tprint(target.hostname.padEnd(23) + 
 			`${FormatMoney(target.moneyAvailable)} / ${FormatMoney(target.moneyMax)}`.padEnd(32) +
 			`${Math.round(target.hackDifficulty)} => ${Math.round(target.minDifficulty)}`.padEnd(16) + 
-			`${hackEmoji}${target.requiredHackingSkill}`.padEnd(16) +
+			`${hackEmoji}${target.requiredHackingSkill}`.padEnd(15) +
 			(target.weakenTime/1000/60).toFixed(1).padEnd(16) +
-			target.hackEarnRate);
+			FormatMoney(target.hackEarnRate, 1));
 	});
 
 }

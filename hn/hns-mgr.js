@@ -57,7 +57,7 @@ export async function main(ns) {
 	}
 }
 
-// Determines the ideal next upgrade out of all current Hacknet servers and buys it if there's enough money
+// UPGRADE MODE: Determines the ideal next upgrade out of all current Hacknet servers and buys it if there's enough money
 export function HnsUpgradeHacknetServers(ns, verbose) {
 	let nodes = hn.GetHacknetNodes(ns);
 	let minHashGain = Number.MAX_SAFE_INTEGER;
@@ -65,6 +65,16 @@ export function HnsUpgradeHacknetServers(ns, verbose) {
 	let nodeToUpgrade = -1;
 	let upgradePart = hn.HnsUpgradeParts.None;
 	let upgradeCost = 0;
+
+	// First, if no nodes exist, buy the 1st node
+	if (nodes.length === 0) { 
+		if (ns.hacknet.purchaseNode() > -1) {
+			Vprint(ns, verbose, `Purchased new Hacknet Server! ` +
+				`Cost of server: ${FormatMoney(newServerCost)}`);
+		}
+		else
+			Vprint(ns, verbose, `ERROR: Unable to purchase new Hacknet Server for ${FormatMoney(newServerCost)}`);
+	}
 
 	// cycle through nodes and determine next best upgrade
 	for (let i=0; i<nodes.length; i++) {

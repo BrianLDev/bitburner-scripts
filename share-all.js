@@ -3,8 +3,10 @@ import { GetHosts, CalcMaxThreads, Vprint } from "helper-functions.js"
 
 export async function main(ns) {
 	let maxSharePower = ns.args[0];
-	maxSharePower = (maxSharePower == null || maxSharePower == NaN) ? maxSharePower = 1.25 : maxSharePower;
 	let verbose = ns.args[1];
+
+	maxSharePower = (maxSharePower == '_' || maxSharePower == null || 
+		maxSharePower == NaN) ? maxSharePower = 1.50 : maxSharePower;
 	verbose = (verbose == "true" || verbose == true) ? true : false;
 
 	const sharefile = "/hax/share.js"

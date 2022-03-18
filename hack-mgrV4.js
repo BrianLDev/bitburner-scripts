@@ -81,7 +81,7 @@ export async function main(ns) {
 		// HACKBATCH LOOP
 		while (batchesToRun > 0) {
 			// HACKBATCH
-			target = await HackBatch(target, 10);	// Batch: Hack -> Weaken -> Grow -> Weaken
+			await HackBatch(target, 10);	// Batch: Hack -> Weaken -> Grow -> Weaken
 			batchesToRun--;
 
 			// Check that there's enough total ram to run at least 1 full hack batch
@@ -142,6 +142,8 @@ export async function main(ns) {
 		if (!target.isGrown) {
 			// Grow
 			delay = Math.ceil(h.weakenTime(target, player) - h.growTime(target, player) + cushion);
+			if (target.moneyAvailable < 1)
+				target.moneyAvailable = 1;	// to avoid growthAnalyze infinity error
 			threads = CalcJobThreads(ns, target, JobType.grow, hackPct, moneyThresh, securityThresh);
 			target = await Grow(target, threads, delay);
 			// Weaken 2
@@ -170,13 +172,13 @@ export async function main(ns) {
 		delay = Math.ceil(target.weakenTime - target.hackTime + batchDelay);
 		threads = CalcJobThreads(ns, target, JobType.hack, hackPct, moneyThresh, securityThresh);
 		totalThreads += threads;
-		target = await Hack(target, threads, delay);
+		await Hack(target, threads, delay);
 
 		// 2) SCHDEULE WEAKEN FOR HACK (cushion * 1: resolves 2nd)
 		delay = cushion + batchDelay;
 		threads = CalcJobThreads(ns, target, JobType.weaken, hackPct, moneyThresh, securityThresh);
 		totalThreads += threads;
-		target = await Weaken(target, threads, delay);
+		await Weaken(target, threads, delay);
 
 		// 3) SCHEDULE GROW (cushion * 2 + (weakentime-growtime): resolves 3rd)
 		target.growTime = h.growTime(target, player);
@@ -184,13 +186,13 @@ export async function main(ns) {
 		delay = Math.ceil(target.weakenTime - target.growTime + (cushion*2) + batchDelay);
 		threads = CalcJobThreads(ns, target, JobType.grow, hackPct, moneyThresh, securityThresh);
 		totalThreads += threads;
-		target = await Grow(target, threads, delay);
+		await Grow(target, threads, delay);
 
 		// 4) SCHEDULE WEAKEN FOR GROW (cushion * 3: resolves last)
 		delay = (cushion * 3) + batchDelay;
 		threads = CalcJobThreads(ns, target, JobType.weaken, hackPct, moneyThresh, securityThresh);
 		totalThreads += threads;
-		target = await Weaken(target, threads, delay);
+		await Weaken(target, threads, delay);
 
 		// calculate total threads/ram, and return target
 		Vprint(ns, verbose, `~~ Done scheduling hack batch on: ${target.hostname}`)

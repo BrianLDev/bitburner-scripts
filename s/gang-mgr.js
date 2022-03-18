@@ -3,7 +3,7 @@ import { Vprint } from "helper-functions.js"
 
 export async function main(ns) {
 	const g = ns.gang;
-	const TARGET_AVG_STATS_BASE = 30;	// Target base stats before multipliers
+	const TARGET_AVG_STATS_BASE = 40;	// Target base stats before multipliers
 	const ASCEND_MULT = 1.20;			// Ascend when multiplers will grow by this much
 	const LOOP_INTERVAL = 5000;
 	let verbose = true;	// TODO: UPDATE THIS LATER
@@ -33,14 +33,16 @@ export async function main(ns) {
 			if (m.isTrained) {
 				// TODO: FIGURE OUT HOW TO TIME TERRITORY WARFARE EXACTLY ON 20 SECOND CHECK
 				// Engage in territory warfare more the worse it is
-				if (gangInfo.territory * 2 <= Math.random() ) {
+				let earlyGameAdj = 1.35;
+				// more likely to engage in territory warfare until territory > ~70%
+				if (Math.pow(1+gangInfo.territory, earlyGameAdj)-1 <= Math.random() ) {
 					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 				}
 				else {
 					// HACKING GANG TASKS
 					if (gangInfo.isHacking) {
-						// reduce wanted penalty 50% of the time when it gets bad (lower=worse)
-						if (gangInfo.wantedPenalty <= .25 && Math.random() <= .50)
+						// reduce wanted penalty when it gets bad (lower=worse)
+						if (gangInfo.wantedPenalty * 2 < Math.random() )
 							g.setMemberTask(m.name, GangTasks.Hacking.ETHICAL_HACKING);
 						// early game
 						else if (m.hack < 100) {
@@ -51,7 +53,7 @@ export async function main(ns) {
 							g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
 						// late game
 						else {
-							if (m.earnedRespect < 10000 * m.avgAscMult)
+							if (m.earnedRespect < 15000 * m.avgAscMult)
 								g.setMemberTask(m.name, GangTasks.Hacking.CYBERTERRORISM);
 							else
 								g.setMemberTask(m.name, GangTasks.Hacking.MONEY_LAUNDERING);
@@ -59,16 +61,21 @@ export async function main(ns) {
 					}
 					// COMBAT GANG TASKS
 					else {
+						// reduce wanted penalty when it gets bad (lower=worse)
+						if (gangInfo.wantedPenalty * 2 < Math.random() )
+							g.setMemberTask(m.name, GangTasks.Combat.VIGILANTE_JUSTICE);
 						// early game
-						if (m.avgStats < 100) {
-							g.setMemberTask(m.name, GangTasks.Combat.PHISHING);
+						else if (m.avgStats < 100) {
+							g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
 						}
 						// mid game
 						else if (m.avgStats < 500)
-							g.setMemberTask(m.name, GangTasks.Combat.FRAUD);
+							g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
 						// late game
 						else {
-							if (m.earnedRespect < 5000 * m.avgAscMult)
+							if (m.earnedRespect < 500 * m.avgAscMult)
+								g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+							else if (m.earnedRespect < 15000 * m.avgAscMult)
 								g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
 							else
 								g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
@@ -90,14 +97,14 @@ export async function main(ns) {
 			let totalAugsCost = 0;
 			augs.forEach(e => totalAugsCost += e.cost);
 			
-			// Buy Augs (late game)
-			if (gangInfo.moneyGainRate > totalAugsCost) {
+			// Buy Augs (late game) - recoup cost in 30 minutes
+			if (totalAugsCost < gangInfo.moneyGainRate * 30*60) {
 				augs.forEach(aug => {
 					g.purchaseEquipment(m.name, aug.name);
 				});
 			}
-			// Buy Equip (late game)
-			if (gangInfo.moneyGainRate > totalEquipCost) {
+			// Buy Equip (late game) - recoup cost in 5 minutes
+			if (totalEquipCost < gangInfo.moneyGainRate * 5*60) {
 				equip.forEach(e => {
 					g.purchaseEquipment(m.name, e.name);
 				});
@@ -106,20 +113,24 @@ export async function main(ns) {
 
 			// ASCENSION
 			m.ascMult = g.getAscensionResult(m.name);
-			if (m.ascMult) {
+			// make sure ascending doesn't jack up the wanted penalty
+			let respectRemain = gangInfo.respect - m.earnedRespect;
+			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * 5)) {
 				if (gangInfo.isHacking) {
-					// Hacking related gang ascension
+					// Hacking gang ascension
 					if (m.ascMult.hack > ASCEND_MULT) {
 						Vprint(ns, verbose, `Gang member is ascending!  ${m.name}`)
 						g.ascendMember(m.name);	
 					}
 				}
 				else {
-					// Combat related gang ascension
+					// Combat gang ascension
 					m.avgAscMult = (m.ascMult.hack + m.ascMult.str + m.ascMult.def + 
 						m.ascMult.dex + m.ascMult.agi + m.ascMult.cha) / 6;
+					m.avgCombatAscMult = (m.ascMult.str + m.ascMult.def + 
+						m.ascMult.dex + m.ascMult.agi) / 4;
 					// Ascend when multipliers increased by certain multiple
-					if (m.avgAscMult > ASCEND_MULT) {
+					if (m.avgCombatAscMult > ASCEND_MULT) {
 						Vprint(ns, verbose, `Gang member is ascending!  ${m.name}`)
 						g.ascendMember(m.name);
 					}
@@ -128,7 +139,7 @@ export async function main(ns) {
 		});
 
 		// GANG WARFARE
-		if (!gangInfo.territoryWarfareEngaged) {
+		if (!gangInfo.territoryWarfareEngaged && gangInfo.power > 5) {
 			gangInfo = g.getGangInformation();
 			// have to do gymnastics here to convert messy object w/ magic strings into a clean array
 			let otherGangs = g.getOtherGangInformation();
@@ -156,30 +167,30 @@ export function TrainMember(ns, member, targetAvgStatsBase) {
 	member.isTrained = false;
 
 	if (gangInfo.isHacking) {
-		// Hacking focused training
+		// Hacking gang training
 		// First check if training is complete or not
-		if (member.hack < targetAvgStatsBase * member.hack_asc_mult) {
+		if (member.hack < targetAvgStatsBase * member.hack_mult) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_HACKING);
 		}
-		else if (member.cha < targetAvgStatsBase * member.cha_asc_mult  * 0.5) {
+		else if (member.cha < targetAvgStatsBase * member.cha_mult  * 0.5) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_CHARISMA);
 		}
 		// even hacking gang needs combat stats for territory warfare
-		else if (member.avgCombatStats < targetAvgStatsBase * member.avgAscMult) {
+		else if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_COMBAT);
 		}
 		else
 			member.isTrained = true;
 	}
 	else {
-		// Combat focused training
-		if (member.hack < targetAvgStatsBase * member.hack_asc_mult * 0.75) {
+		// Combat gang training
+		if (member.hack < targetAvgStatsBase * member.hack_mult * 0.75) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_HACKING);
 		}
-		else if (member.cha < targetAvgStatsBase * member.cha_asc_mult * 0.5) {
+		else if (member.cha < targetAvgStatsBase * member.cha_mult * 0.5) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_CHARISMA);
 		}
-		else if (member.avgCombatStats < targetAvgStatsBase * member.avgAscMult) {
+		else if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_COMBAT);
 		}
 		else
@@ -195,9 +206,12 @@ export function GetGangMembers(ns) {
 		let m = g.getMemberInformation(name);
 		m.name = name;
 		m.avgStats = (m.hack + m.str + m.def + m.dex + m.agi + m.cha) / 6;
+		m.avgCombatStats = (m.str + m.def + m.dex + m.agi) / 4;
+		m.avgMult = (m.hack_mult + m.str_mult + m.def_mult + m.dex_mult + 
+			m.agi_mult + m.cha_mult) / 6;
+		m.avgCombatMult = (m.str_mult + m.def_mult + m.dex_mult + m.agi_mult) / 4;
 		m.avgAscMult = (m.hack_asc_mult + m.str_asc_mult + m.def_asc_mult + m.dex_asc_mult + 
 			m.agi_asc_mult + m.cha_asc_mult) / 6;
-		m.avgCombatStats = (m.str + m.def + m.dex + m.agi) / 4;
 		m.avgCombatAscMult = (m.str_asc_mult + m.def_asc_mult + m.dex_asc_mult + 
 			m.agi_asc_mult) / 4;
 		gangMembers.push(m);
@@ -236,15 +250,15 @@ export const GangTasks = {
 		TERRITORY_WARFARE : "Territory Warfare",
 	},
 	Combat : {	// FIX THESE
-		RANSOMWARE : "Ransomware",
-		PHISHING : "Phishing",
-		ID_THEFT : "Identity Theft",
-		DDOS : "DDoS Attacks",
-		VIRUS : "Plant Virus",
-		FRAUD : "Fraud & Counterfeiting",
-		MONEY_LAUNDERING : "Money Laundering",
-		CYBERTERRORISM : "Cyberterrorism",
-		ETHICAL_HACKING : "Ethical Hacking",
+		MUG : "Mug People",
+		DEAL_DRUGS : "Deal Drugs",
+		STRONGARM : "Strongarm Civilians",
+		CON : "Run a Con",
+		ARMED_ROBBERY : "Armed Robbery",
+		TRAFFICK_ARMS : "Traffick Illegal Arms",
+		BLACKMAIL : "Threaten & Blackmail",
+		HUMAN_TRAFFICKING : "Human Trafficking",
+		TERRORISM : "Terrorism",
 		VIGILANTE_JUSTICE : "Vigilante Justice",
 		TRAIN_COMBAT : "Train Combat",
 		TRAIN_HACKING : "Train Hacking",
