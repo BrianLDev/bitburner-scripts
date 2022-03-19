@@ -17,7 +17,7 @@ export async function QuickstartEndGame(ns) {
 	// NOTE: ASSUMES LATEGAME WITH LOTS OF MONEY COMING IN AFTER REBOOT (GANGS/CORPS)
 	// TODO: MAKE SURE ENOUGH MONEY AVAILABLE TO PURCHASE TOR AND PROGRAMS
 
-	const ProgramsArr = Object.entries(c.Program);	// convert enum to Array for iteration
+	const ProgramsArr = Object.values(c.Program);	// convert enum to Array for iteration
 	const F_RootAll = "root-all.js";
 	const F_HackMgr = "hack-mgrV4.js";
 	const F_Bkdr = "s/bkdr.js";

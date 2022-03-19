@@ -391,16 +391,20 @@ export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {
 
 export function FormatMoney(money, decimalPlaces=3) {
 	decimalPlaces = Math.max(decimalPlaces, 0);
-	if (money < 1000)
+	if (Math.abs(money) < 1000)
 		return "$" + money.toFixed(decimalPlaces);
-	else if (money < 1000000)
+	else if (Math.abs(money) < 1000000)
 		return "$" + (money/1000).toFixed(decimalPlaces) + "k";
-	else if (money < 1000000000)
+	else if (Math.abs(money) < 1000000000)
 		return "$" + (money/1000000).toFixed(decimalPlaces) + "m";
-	else if (money < 1000000000000)
+	else if (Math.abs(money) < 1000000000000)
 		return "$" + (money/1000000000).toFixed(decimalPlaces) + "b";
-	else if (money < 1000000000000000)
+	else if (Math.abs(money) < 1000000000000000)
 		return "$" + (money/1000000000000).toFixed(decimalPlaces) + "t";
+	else if (Math.abs(money) < 1000000000000000000)
+		return "$" + (money/1000000000000000).toFixed(decimalPlaces) + "qd";
+	else if (Math.abs(money) < 1000000000000000000000)
+		return "$" + (money/1000000000000000000).toFixed(decimalPlaces) + "Qt";
 	else
-		return "$" + (money/1000000000000).toFixed(decimalPlaces) + "t";	// TODO: REPLACE WITH HIGHER DENOMINATION AS NEEDED
+		return "$" + (money/1000000000000000000).toFixed(decimalPlaces) + "Qt";	// TODO: REPLACE WITH HIGHER DENOMINATION AS NEEDED
 }

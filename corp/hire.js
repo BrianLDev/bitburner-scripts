@@ -3,6 +3,8 @@ import * as c from "constants.js";
 import { Vprint, FormatMoney } from "helper-functions.js";
 
 export async function main(ns) {
+	ns.disableLog("ALL");
+	
 	let divisionName = ns.args[0];
 	let hireCount = ns.args[1];
 	let verbose = ns.args[2];
@@ -27,7 +29,7 @@ export async function main(ns) {
 					// expand size if needed
 					if (office.employees.length == office.size) {
 						let upgCost = corp.getOfficeSizeUpgradeCost(divisionName, cityName, 1);
-						let moneyAvailable = ns.getServerMoneyAvailable('home');
+						let moneyAvailable = corp.getCorporation().funds;
 						if (moneyAvailable < upgCost){
 							ns.tprint(`ERROR: Not enough money to upgrade office size for ${divisionName} in ${cityName}: ${FormatMoney(moneyAvailable)} available vs ${FormatMoney(upgCost)} cost.  Quitting.`);
 							await ns.exit();
@@ -36,9 +38,13 @@ export async function main(ns) {
 							corp.upgradeOfficeSize(divisionName, cityName, 1);
 					}
 					// hire employee and assign to training
-					let empl = corp.hireEmployee(divisionName, cityName);
-					if (empl !== undefined && empl !== null)
-						await corp.assignJob(divisionName, cityName, empl.name, 'Training');
+					// sometimes corp.hireEmployee fails, so loop until it hires someone
+					let empl = undefined;
+					while (empl === undefined) {
+						empl = corp.hireEmployee(divisionName, cityName);
+						await ns.sleep(500);
+					}
+					await corp.assignJob(divisionName, cityName, empl.name, 'Training');
 				}
 			}
 		}
