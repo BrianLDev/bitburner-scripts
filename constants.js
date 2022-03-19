@@ -63,6 +63,24 @@ export const Program = {
 	formulas: "Formulas.exe"
 }
 
+// enum of corp industries
+export const CorpIndustry = {
+	agriculture: "Agriculture",
+	chemical: "Chemical",
+	computer: "Computer",
+	energy: "Energy",
+	fishing: "Fishing",
+	food: "Food",
+	healthcare: "Healthcare",
+	mining: "Mining",
+	pharma: "Pharmaceutical",
+	realEstate: "Real Estate",
+	robotics: "Robotics",
+	software: "Software",
+	tobacco: "Tobacco",
+	utilities: "Utilities"
+}
+
 
 /////////////////////////////////// WARNING: SPOILERS BELOW ///////////////////////////////////
 

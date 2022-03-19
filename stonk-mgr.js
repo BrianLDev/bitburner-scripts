@@ -117,7 +117,7 @@ export async function main(ns) {
         }
         stocks.sort(function(a, b){return b.expRet - a.expRet});
         stocks.forEach(stock => {
-            if (stock.expRet > -15)
+            if (stock.expRet > -10)
                 Vprint(ns, verbose, `${stock.sym} expected return per share: ${FormatMoney(stock.expRet)}`);
         })
         return stocks;
