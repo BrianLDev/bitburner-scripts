@@ -5,7 +5,7 @@ export async function main(ns) {
 	// NOTE: 2 GB=$110k, 4=$220k, 8=$440k, 16=$880k, 32=$1.760m, 64GB=$3.520m, 128=$7.040m, 256=$14.080, 
 	// 512 GB=$28.16m, 1024=$56.32m, 2048=$112.64, 4096=$225.28, 8192=$450.56, 16384=$901.12, 32768=$1802.24, 
 	// 65536 GB=$3604.48, 131072=$7208.96, 262144=$14417.92, 524288=$28835.84, 1048576=$??
-	let ramTarget = 524288;	// in GB.  Enter this in manually for now
+	let ramTarget = 64;	// in GB.  Enter this in manually for now
 
 	// TODO: CREATE A FUNCTION THAT CALCULATES SERVER RAM TARGET BASED ON RAM AT HOME AND TOTAL MONEY AVAILABLE/MADE
 

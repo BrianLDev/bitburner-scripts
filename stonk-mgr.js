@@ -15,6 +15,11 @@ const numCycles = 10; // Each cycle is 2 seconds
 export async function main(ns) {
     let verbose = false; // TODO: ALLOW THIS TO BE ENTERED IN ARGS
 
+    if (ns.stock.getSymbols() === undefined || ns.stock.getSymbols() === null) {
+        ns.tprint(`ERROR: 4S TIX API is required to run this script. Gotta spend money to make money...`);
+        ns.exit();
+    }
+
     // INITIALIZE
     ns.disableLog("ALL");
     Vprint(ns, true, `STONK MANAGER STARTED... Stonks only go up!!`);

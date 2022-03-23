@@ -6,26 +6,26 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 	
 	let divisionName = ns.args[0];
-	let hireCount = ns.args[1];
-	let verbose = ns.args[2];
+	let cityName = ns.args[1];
+	let hireCount = ns.args[2];
+	let verbose = ns.args[3];
 	verbose = (verbose == true || verbose == "true") ? true : false;
 
 	const corp = ns.corporation;
-	let corpData = corp.getCorporation();
-	let divisionData = corp.getDivision(divisionName)
+	const corpData = corp.getCorporation();
+	const divisionData = corp.getDivision(divisionName)
+	let citiesArr = Object.values(c.City);	// convert City enum to array for iteration
 
 	if (!divisionData) {
 		ns.tprint("ERROR: incorrect division name specified in arg[0].  Exiting...");
 		ns.exit();
 	}
-	if (hireCount == null || hireCount <= 0) {
-		ns.tprint("ERROR: need to specify num employees > 0 in arg[1].  Exiting...");
-		ns.exit();
-	}
-
+	if (citiesArr.find(city => city === cityName) != undefined)
+		citiesArr = [cityName];	// override cities array for single city if specified in args
+	if (hireCount === '_' || hireCount == null || hireCount <= 0)
+		hireCount = 1;	// default to 1
 
 	Vprint(ns, true, `Beginning hiring process for ${divisionName}.  Please be patient as this can take a while to run depending on hire count.`);
-	let citiesArr = Object.values(c.City);	// convert City enum to array for iteration
 
 	// 1) Hire employees
 	for (let i=0; i<hireCount; i++) {

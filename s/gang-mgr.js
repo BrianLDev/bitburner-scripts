@@ -5,17 +5,19 @@ export async function main(ns) {
 	const g = ns.gang;
 	const TARGET_AVG_STATS_BASE = 40;	// Target base stats before multipliers
 	const ASCEND_MULT = 1.20;			// Ascend when multiplers will grow by this much
-	const LOOP_INTERVAL = 5000;
+	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 50ms to sync w/ terr war cushion
+	const TERR_WAR_INTERVAL = 20000-300;// 20 seconds - 300ms cushion
 	let verbose = true;	// TODO: UPDATE THIS LATER
 
-	let gangInfo, gangMembers, gangTasks;
-	gangTasks = GetGangTasks(ns);
+	let gangInfo, gangMembers;
+
+	// GET NEXT TERRITORY WARFARE TICK (UPDATES EVERY 20 SECONDS)
+	let nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
 	
 	while (true) {
 		// UPDATE GANG INFO
 		gangInfo = g.getGangInformation();
 		gangMembers = GetGangMembers(ns);
-		gangTasks = GetGangTasks(ns);
 
 		// RECRUIT NEW MEMBERS
 		if (g.canRecruitMember()) {
@@ -24,6 +26,18 @@ export async function main(ns) {
 			gangMembers = GetGangMembers(ns);
 			Vprint(ns, verbose, `Recruiting new gang member: ${newMember}`)
 		}
+		
+		// TERRITORY WARFARE (ENGAGE ONCE EVERY 20 SEC, SYNCHRONIZED WITH CHECK)
+		if (Date.now() >= nextTerrWarfareTick) {
+			// Vprint(ns, verbose, `TERRITORY WARFARE START!`)
+			// assign everyone to territory warfare
+			gangMembers.forEach(m => {
+				g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
+			})
+			nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+			// Vprint(ns, verbose, `TERRITORY WARFARE END!`)
+		}
+
 
 		gangMembers.forEach(m => {
 			// TRAINING
@@ -31,57 +45,48 @@ export async function main(ns) {
 			
 			// ASSIGN TASKS
 			if (m.isTrained) {
-				// TODO: FIGURE OUT HOW TO TIME TERRITORY WARFARE EXACTLY ON 20 SECOND CHECK
-				// Engage in territory warfare more the worse it is
-				let earlyGameAdj = 1.35;
-				// more likely to engage in territory warfare until territory > ~70%
-				if (Math.pow(1+gangInfo.territory, earlyGameAdj)-1 <= Math.random() ) {
-					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
-				}
-				else {
-					// HACKING GANG TASKS
-					if (gangInfo.isHacking) {
-						// reduce wanted penalty when it gets bad (lower=worse)
-						if (gangInfo.wantedPenalty * 2 < Math.random() )
-							g.setMemberTask(m.name, GangTasks.Hacking.ETHICAL_HACKING);
-						// early game
-						else if (m.hack < 100) {
-							g.setMemberTask(m.name, GangTasks.Hacking.PHISHING);
-						}
-						// mid game
-						else if (m.hack < 500)
-							g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
-						// late game
-						else {
-							if (m.earnedRespect < 15000 * m.avgAscMult)
-								g.setMemberTask(m.name, GangTasks.Hacking.CYBERTERRORISM);
-							else
-								g.setMemberTask(m.name, GangTasks.Hacking.MONEY_LAUNDERING);
-						}
-					}
-					// COMBAT GANG TASKS
+				// HACKING GANG TASKS
+				if (gangInfo.isHacking) {
+					// reduce wanted penalty when it gets bad (lower=worse)
+					if (gangInfo.wantedPenalty * 2 < Math.random() )
+						g.setMemberTask(m.name, GangTasks.Hacking.ETHICAL_HACKING);
+					// early game
+					else if (m.hack < 100)
+						g.setMemberTask(m.name, GangTasks.Hacking.PHISHING);
+					// mid game
+					else if (m.hack < 500)
+						g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
+					// late game
 					else {
-						// reduce wanted penalty when it gets bad (lower=worse)
-						if (gangInfo.wantedPenalty * 2 < Math.random() )
-							g.setMemberTask(m.name, GangTasks.Combat.VIGILANTE_JUSTICE);
-						// early game
-						else if (m.avgStats < 100) {
-							g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
-						}
-						// mid game
-						else if (m.avgStats < 500)
-							g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
-						// late game
-						else {
-							if (m.earnedRespect < 500 * m.avgAscMult)
-								g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
-							else if (m.earnedRespect < 15000 * m.avgAscMult)
-								g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
-							else
-								g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
-						}
+						if (m.earnedRespect < 15000 * m.avgAscMult)
+							g.setMemberTask(m.name, GangTasks.Hacking.CYBERTERRORISM);
+						else
+							g.setMemberTask(m.name, GangTasks.Hacking.MONEY_LAUNDERING);
 					}
-
+				}
+				// COMBAT GANG TASKS
+				else {
+					// reduce wanted penalty when it gets bad (lower=worse)
+					if (gangInfo.wantedPenalty * 2 < Math.random() )
+						g.setMemberTask(m.name, GangTasks.Combat.VIGILANTE_JUSTICE);
+					// early game
+					else if (m.avgStats < 50)
+						g.setMemberTask(m.name, GangTasks.Combat.MUG);
+					// mid-early game
+					else if (m.avgStats < 100)
+						g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+					// mid-late game
+					else if (m.avgStats < 500)
+						g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
+					// late game
+					else {
+						if (m.earnedRespect < 500 * m.avgAscMult)
+							g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+						else if (m.earnedRespect < 15000 * m.avgAscMult)
+							g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
+						else
+							g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
+					}
 				}
 			}
 
@@ -138,7 +143,7 @@ export async function main(ns) {
 			}
 		});
 
-		// GANG WARFARE
+		// GANG TERRITORY WARFARE ON/OFF
 		if (!gangInfo.territoryWarfareEngaged && gangInfo.power > 5) {
 			gangInfo = g.getGangInformation();
 			// have to do gymnastics here to convert messy object w/ magic strings into a clean array
@@ -159,6 +164,21 @@ export async function main(ns) {
 		// END OF LOOP
 		await ns.sleep(LOOP_INTERVAL);
 	}
+}
+
+export async function GetTerrWarfareTick(ns) {
+	let otherGangs = Object.values(ns.gang.getOtherGangInformation());
+	let prevPower = 0, power = 0;
+	otherGangs.forEach(gang => power += gang.power);
+	prevPower = power;
+	while (prevPower === power) {
+		otherGangs = Object.values(ns.gang.getOtherGangInformation());
+		prevPower = power;
+		power = 0;
+		otherGangs.forEach(gang => power += gang.power);
+		await ns.sleep(1);
+	}
+	return Date.now()-5;	// return now minus 5 ms cushion
 }
 
 export function TrainMember(ns, member, targetAvgStatsBase) {
