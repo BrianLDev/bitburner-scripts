@@ -109,7 +109,7 @@ export async function main(ns) {
 			// filter out already owned
 			if (m.upgrades.length > 0) {
 				equip = equip.filter(e => m.upgrades.includes(e.name) === false);
-				augs = augs.filter(a => m.upgrades.includes(a.name) === false);
+				augs = augs.filter(a => m.augmentations.includes(a.name) === false);
 			}
 			// buy 1 aug per loop
 			if (augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
