@@ -1,23 +1,27 @@
 /** @param {NS} ns **/
-import { Vprint } from "helper-functions.js"
+import { Vprint, FormatMoney } from "helper-functions.js"
 
 export async function main(ns) {
 	const g = ns.gang;
-	const TARGET_AVG_STATS_BASE = 40;	// Target base stats before multipliers
-	const ASCEND_MULT = 1.20;			// Ascend when multiplers will grow by this much
+	const TARGET_AVG_STATS_BASE = 50;	// Target base stats before multipliers
+	const ASCEND_MULT = 1.05;			// Ascend when multiplers will grow by this much
 	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 50ms to sync w/ terr war cushion
 	const TERR_WAR_INTERVAL = 20000-300;// 20 seconds - 300ms cushion
 	let verbose = true;	// TODO: UPDATE THIS LATER
 
 	let gangInfo, gangMembers;
+	let bonusTime = g.getBonusTime();
 
 	// GET NEXT TERRITORY WARFARE TICK (UPDATES EVERY 20 SECONDS)
-	let nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+	let nextTerrWarfareTick;
+	if (bonusTime <= 0)
+		nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
 	
 	while (true) {
 		// UPDATE GANG INFO
 		gangInfo = g.getGangInformation();
 		gangMembers = GetGangMembers(ns);
+		bonusTime = g.getBonusTime();
 
 		// RECRUIT NEW MEMBERS
 		if (g.canRecruitMember()) {
@@ -28,16 +32,13 @@ export async function main(ns) {
 		}
 		
 		// TERRITORY WARFARE (ENGAGE ONCE EVERY 20 SEC, SYNCHRONIZED WITH CHECK)
-		if (Date.now() >= nextTerrWarfareTick) {
-			// Vprint(ns, verbose, `TERRITORY WARFARE START!`)
+		if (Date.now() >= nextTerrWarfareTick && bonusTime <= 0) {
 			// assign everyone to territory warfare
 			gangMembers.forEach(m => {
 				g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 			})
 			nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
-			// Vprint(ns, verbose, `TERRITORY WARFARE END!`)
 		}
-
 
 		gangMembers.forEach(m => {
 			// TRAINING
@@ -45,10 +46,11 @@ export async function main(ns) {
 			
 			// ASSIGN TASKS
 			if (m.isTrained) {
+				let rand = Math.random()
 				// HACKING GANG TASKS
 				if (gangInfo.isHacking) {
 					// reduce wanted penalty when it gets bad (lower=worse)
-					if (gangInfo.wantedPenalty * 2 < Math.random() )
+					if (gangInfo.wantedPenalty < rand)
 						g.setMemberTask(m.name, GangTasks.Hacking.ETHICAL_HACKING);
 					// early game
 					else if (m.hack < 100)
@@ -67,13 +69,20 @@ export async function main(ns) {
 				// COMBAT GANG TASKS
 				else {
 					// reduce wanted penalty when it gets bad (lower=worse)
-					if (gangInfo.wantedPenalty * 2 < Math.random() )
+					if (gangInfo.wantedPenalty < rand)
 						g.setMemberTask(m.name, GangTasks.Combat.VIGILANTE_JUSTICE);
 					// early game
-					else if (m.avgStats < 50)
-						g.setMemberTask(m.name, GangTasks.Combat.MUG);
+					else if (m.avgStats < 175) {
+						rand = Math.random();
+						if (rand < .50)
+							g.setMemberTask(m.name, GangTasks.Combat.MUG);
+						else if (rand < .75)
+							g.setMemberTask(m.name, GangTasks.Combat.TRAIN_COMBAT);
+						else
+							g.setMemberTask(m.name, GangTasks.Combat.TRAIN_HACKING);
+					}
 					// mid-early game
-					else if (m.avgStats < 100)
+					else if (m.avgStats < 250)
 						g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
 					// mid-late game
 					else if (m.avgStats < 500)
@@ -90,37 +99,37 @@ export async function main(ns) {
 				}
 			}
 
-			// BUY WEAPONS AND AUGS
-			// TODO: BUY WEAPONS/AUGS IN EARLY GAME
+			// BUY EQUIPMENT AND AUGS
+			const paybkTimeEq = 20 * 60;			// 20 min (in seconds)
+			const paybkTimeAug = 30 * 24 * 60 * 60;	// 30 days (in seconds)
+			let cash = ns.getServerMoneyAvailable('home');
 			let equipAugs = GetGangEquipment(ns, true);
 			let equip = GetGangEquipment(ns, false)	// excludes augs
-			// equip = // TODO: FILTER BASED ON UNOWNED
 			let augs = equipAugs.filter(e => e.type == EquipType.AUG);
-			// augs = // TODO: FILTER BASED ON UNOWNED
-			let totalEquipCost = 0;
-			equip.forEach(e => totalEquipCost += e.cost);
-			let totalAugsCost = 0;
-			augs.forEach(e => totalAugsCost += e.cost);
-			
-			// Buy Augs (late game) - recoup cost in 30 minutes
-			if (totalAugsCost < gangInfo.moneyGainRate * 30*60) {
-				augs.forEach(aug => {
-					g.purchaseEquipment(m.name, aug.name);
-				});
+			// filter out already owned
+			if (m.upgrades.length > 0) {
+				equip = equip.filter(e => m.upgrades.includes(e.name) === false);
+				augs = augs.filter(a => m.upgrades.includes(a.name) === false);
 			}
-			// Buy Equip (late game) - recoup cost in 5 minutes
-			if (totalEquipCost < gangInfo.moneyGainRate * 5*60) {
-				equip.forEach(e => {
-					g.purchaseEquipment(m.name, e.name);
-				});
+			// buy 1 aug per loop
+			if (augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
+				g.purchaseEquipment(m.name, augs[0].name);
+				Vprint(ns, verbose, `Bought aug for ${m.name}: ${augs[0].name} ` +
+					`costing ${FormatMoney(augs[0].cost)}`);
+			}
+			// buy 1 quipment per loop
+			if (equip[0].cost < gangInfo.moneyGainRate * paybkTimeEq && equip[0].cost < cash) {
+				g.purchaseEquipment(m.name, equip[0].name);
+				Vprint(ns, verbose, `Bought equip for ${m.name}: ${equip[0].name} ` +
+					`costing ${FormatMoney(equip[0].cost)}`);
 			}
 
 
 			// ASCENSION
 			m.ascMult = g.getAscensionResult(m.name);
 			// make sure ascending doesn't jack up the wanted penalty
-			let respectRemain = gangInfo.respect - m.earnedRespect;
-			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * 5)) {
+			let respectRemain = gangInfo.respect - m.earnedRespect;			
+			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * 2)) {
 				if (gangInfo.isHacking) {
 					// Hacking gang ascension
 					if (m.ascMult.hack > ASCEND_MULT) {
@@ -204,7 +213,7 @@ export function TrainMember(ns, member, targetAvgStatsBase) {
 	}
 	else {
 		// Combat gang training
-		if (member.hack < targetAvgStatsBase * member.hack_mult * 0.75) {
+		if (member.hack < targetAvgStatsBase * member.hack_mult) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_HACKING);
 		}
 		else if (member.cha < targetAvgStatsBase * member.cha_mult * 0.5) {
@@ -303,6 +312,7 @@ export function GetGangEquipment(ns, includeAugs=true) {
 		else if (e.type == EquipType.AUG && includeAugs == true)
 			equip.push(e);
 	});
+	equip.sort((a,b) => a.cost > b.cost ? 1 : -1)
 	return equip;
 }
 
