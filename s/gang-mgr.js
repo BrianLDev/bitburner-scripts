@@ -1,21 +1,22 @@
 /** @param {NS} ns **/
 import { Vprint, FormatMoney } from "helper-functions.js"
 
+// NOTE: WORKS AWESOME! (but has a lot of "magic numbers" in code below).
+// TODO: EXTRACT MAGIC NUMBERS AND MAKE THEM INTO GLOBAL OR LOCAL CONSTANTS
+// TODO: CREATE ARG OPTION THAT DISALLOWS BUYING EQUIP AND/OR AUGS
+
 export async function main(ns) {
 	const g = ns.gang;
 	const TARGET_AVG_STATS_BASE = 50;	// Target base stats before multipliers
-	const ASCEND_MULT = 1.05;			// Ascend when multiplers will grow by this much
-	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 50ms to sync w/ terr war cushion
-	const TERR_WAR_INTERVAL = 20000-300;// 20 seconds - 300ms cushion
+	const ASCEND_MULT = 1.15;			// Ascend when multiplers will grow by this much
+	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 90ms to sync w/ terr war cushion
+	const TERR_WAR_INTERVAL = 20000-250;// 20 seconds - 250ms cushion
 	let verbose = true;	// TODO: UPDATE THIS LATER
 
-	let gangInfo, gangMembers;
-	let bonusTime = g.getBonusTime();
+	let gangInfo, gangMembers, bonusTime;
 
 	// GET NEXT TERRITORY WARFARE TICK (UPDATES EVERY 20 SECONDS)
-	let nextTerrWarfareTick;
-	if (bonusTime <= 0)
-		nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+	let nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
 	
 	while (true) {
 		// UPDATE GANG INFO
@@ -28,16 +29,18 @@ export async function main(ns) {
 			let newMember = GangNames[gangMembers.length]
 			g.recruitMember(newMember);
 			gangMembers = GetGangMembers(ns);
-			Vprint(ns, verbose, `Recruiting new gang member: ${newMember}`)
+			Vprint(ns, verbose, `🕵️‍♂️Recruiting new gang member: ${newMember}`)
 		}
 		
 		// TERRITORY WARFARE (ENGAGE ONCE EVERY 20 SEC, SYNCHRONIZED WITH CHECK)
-		if (Date.now() >= nextTerrWarfareTick && bonusTime <= 0) {
-			// assign everyone to territory warfare
-			gangMembers.forEach(m => {
-				g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
-			})
-			nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+		if (bonusTime <= 0) {
+			if (Date.now() >= nextTerrWarfareTick) {
+				// assign everyone to territory warfare
+				gangMembers.forEach(m => {
+					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
+				})
+				nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+			}
 		}
 
 		gangMembers.forEach(m => {
@@ -74,23 +77,30 @@ export async function main(ns) {
 					// early game
 					else if (m.avgStats < 175) {
 						rand = Math.random();
-						if (rand < .50)
+						if (rand < .25)
 							g.setMemberTask(m.name, GangTasks.Combat.MUG);
+						else if (rand < .50)
+							g.setMemberTask(m.name, GangTasks.Combat.DEAL_DRUGS);
 						else if (rand < .75)
 							g.setMemberTask(m.name, GangTasks.Combat.TRAIN_COMBAT);
 						else
 							g.setMemberTask(m.name, GangTasks.Combat.TRAIN_HACKING);
 					}
 					// mid-early game
-					else if (m.avgStats < 250)
-						g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+					else if (m.avgStats < 225) {
+						rand = Math.random();
+						if (rand < .50)
+							g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+						else
+							g.setMemberTask(m.name, GangTasks.Combat.CON);
+					}
 					// mid-late game
 					else if (m.avgStats < 500)
 						g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
 					// late game
 					else {
-						if (m.earnedRespect < 500 * m.avgAscMult)
-							g.setMemberTask(m.name, GangTasks.Combat.ARMED_ROBBERY);
+						if (m.agi < TARGET_AVG_STATS_BASE * m.avgAscMult * .75)
+							g.setMemberTask(m.name, GangTasks.Combat.CON);
 						else if (m.earnedRespect < 15000 * m.avgAscMult)
 							g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
 						else
@@ -100,28 +110,35 @@ export async function main(ns) {
 			}
 
 			// BUY EQUIPMENT AND AUGS
-			const paybkTimeEq = 20 * 60;			// 20 min (in seconds)
+			// for payback time, shorter time == less $$ spent
+			// augs last forever including after ascension so assume a very large payback time
+			const paybkTimeEq = 10 * 60;			// 10 min (in seconds)
 			const paybkTimeAug = 30 * 24 * 60 * 60;	// 30 days (in seconds)
-			let cash = ns.getServerMoneyAvailable('home');
 			let equipAugs = GetGangEquipment(ns, true);
 			let equip = GetGangEquipment(ns, false)	// excludes augs
 			let augs = equipAugs.filter(e => e.type == EquipType.AUG);
 			// filter out already owned
-			if (m.upgrades.length > 0) {
+			if (m.upgrades.length > 0 || m.augmentations.length > 0) {
 				equip = equip.filter(e => m.upgrades.includes(e.name) === false);
 				augs = augs.filter(a => m.augmentations.includes(a.name) === false);
 			}
 			// buy 1 aug per loop
-			if (augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
-				g.purchaseEquipment(m.name, augs[0].name);
-				Vprint(ns, verbose, `Bought aug for ${m.name}: ${augs[0].name} ` +
-					`costing ${FormatMoney(augs[0].cost)}`);
+			let cash = ns.getServerMoneyAvailable('home');
+			if (augs.length > 0 && augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
+				if (g.purchaseEquipment(m.name, augs[0].name)) {
+					Vprint(ns, verbose, `🦾Bought aug for ${m.name}: ${augs[0].name} ` +
+						`at ${FormatMoney(augs[0].cost)}`);
+				}
 			}
-			// buy 1 quipment per loop
-			if (equip[0].cost < gangInfo.moneyGainRate * paybkTimeEq && equip[0].cost < cash) {
-				g.purchaseEquipment(m.name, equip[0].name);
-				Vprint(ns, verbose, `Bought equip for ${m.name}: ${equip[0].name} ` +
-					`costing ${FormatMoney(equip[0].cost)}`);
+			// buy 1 equipment per loop (must have 5x cash, don't buy during bonusTime)
+			cash = ns.getServerMoneyAvailable('home');
+			if (equip.length > 0) {
+				if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 0)) {
+					if (g.purchaseEquipment(m.name, equip[0].name)) {
+						Vprint(ns, verbose, `🔪Bought equip for ${m.name}: ${equip[0].name} ` +
+							`at ${FormatMoney(equip[0].cost)}`);
+					}
+				}
 			}
 
 
@@ -129,11 +146,11 @@ export async function main(ns) {
 			m.ascMult = g.getAscensionResult(m.name);
 			// make sure ascending doesn't jack up the wanted penalty
 			let respectRemain = gangInfo.respect - m.earnedRespect;			
-			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * 2)) {
+			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * gangMembers.length)) {
 				if (gangInfo.isHacking) {
 					// Hacking gang ascension
 					if (m.ascMult.hack > ASCEND_MULT) {
-						Vprint(ns, verbose, `Gang member is ascending!  ${m.name}`)
+						Vprint(ns, verbose, `🌟Gang member is ascending!  ${m.name}`)
 						g.ascendMember(m.name);	
 					}
 				}
@@ -145,7 +162,7 @@ export async function main(ns) {
 						m.ascMult.dex + m.ascMult.agi) / 4;
 					// Ascend when multipliers increased by certain multiple
 					if (m.avgCombatAscMult > ASCEND_MULT) {
-						Vprint(ns, verbose, `Gang member is ascending!  ${m.name}`)
+						Vprint(ns, verbose, `🌟Gang member is ascending!  ${m.name}`)
 						g.ascendMember(m.name);
 					}
 				}
@@ -166,7 +183,7 @@ export async function main(ns) {
 			});
 			if (declareWar) {
 				g.setTerritoryWarfare(declareWar);
-				Vprint(ns, verbose, `THIS MEANS WAR!!! (gang warfare engaged)`);
+				Vprint(ns, verbose, `⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️ (gang warfare engaged)`);
 			}
 		}
 		
@@ -197,30 +214,29 @@ export function TrainMember(ns, member, targetAvgStatsBase) {
 
 	if (gangInfo.isHacking) {
 		// Hacking gang training
-		// First check if training is complete or not
-		if (member.hack < targetAvgStatsBase * member.hack_mult) {
+		if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
+			// even hacking gang needs combat stats for territory warfare
+			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_COMBAT);
+		}
+		else if (member.hack < targetAvgStatsBase * member.hack_mult) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_HACKING);
 		}
-		else if (member.cha < targetAvgStatsBase * member.cha_mult  * 0.5) {
+		else if (member.cha < targetAvgStatsBase * member.cha_mult  * 0.75) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_CHARISMA);
-		}
-		// even hacking gang needs combat stats for territory warfare
-		else if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
-			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_COMBAT);
 		}
 		else
 			member.isTrained = true;
 	}
 	else {
 		// Combat gang training
-		if (member.hack < targetAvgStatsBase * member.hack_mult) {
+		if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
+			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_COMBAT);
+		}
+		else if (member.hack < targetAvgStatsBase * member.hack_mult) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_HACKING);
 		}
-		else if (member.cha < targetAvgStatsBase * member.cha_mult * 0.5) {
+		else if (member.cha < targetAvgStatsBase * member.cha_mult * 0.75) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_CHARISMA);
-		}
-		else if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
-			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_COMBAT);
 		}
 		else
 			member.isTrained = true;
