@@ -3,15 +3,23 @@ import { Vprint, FormatMoney } from "helper-functions.js"
 
 // NOTE: WORKS AWESOME! (but has a lot of "magic numbers" in code below).
 // TODO: EXTRACT MAGIC NUMBERS AND MAKE THEM INTO GLOBAL OR LOCAL CONSTANTS
-// TODO: CREATE ARG OPTION THAT DISALLOWS BUYING EQUIP AND/OR AUGS
+// TODO: FIX TERRITORY WARFARE TIMING SYNC
 
 export async function main(ns) {
+	ns.disableLog("ALL");
+	let buyEnabled = ns.args[0];
+	let verbose = ns.args[1];
+
+	buyEnabled = (buyEnabled == false || buyEnabled == "false") ? false : true
+	verbose = (verbose == true || verbose == "true") ? true : false
+
+	Vprint(ns, true, `Gang manager started. buyEnabled: ${buyEnabled}, verbose: ${verbose}`)
+
 	const g = ns.gang;
 	const TARGET_AVG_STATS_BASE = 50;	// Target base stats before multipliers
-	const ASCEND_MULT = 1.15;			// Ascend when multiplers will grow by this much
+	const ASCEND_MULT = 1.13;			// Ascend when multiplers will grow by this much
 	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 90ms to sync w/ terr war cushion
 	const TERR_WAR_INTERVAL = 20000-250;// 20 seconds - 250ms cushion
-	let verbose = true;	// TODO: UPDATE THIS LATER
 
 	let gangInfo, gangMembers, bonusTime;
 
@@ -34,12 +42,19 @@ export async function main(ns) {
 		
 		// TERRITORY WARFARE (ENGAGE ONCE EVERY 20 SEC, SYNCHRONIZED WITH CHECK)
 		if (bonusTime <= 0) {
-			if (Date.now() >= nextTerrWarfareTick) {
-				// assign everyone to territory warfare
-				gangMembers.forEach(m => {
-					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
-				})
-				nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+			if (Math.random() > gangInfo.territory) {	// runs more often with low territory
+				if (Date.now() >= nextTerrWarfareTick) {
+					Vprint(ns, verbose, `⚔️All gang members temporarily assigned to territory warfare.`)
+					// assign everyone to territory warfare
+					gangMembers.forEach(m => {
+						g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
+					})
+					nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+					Vprint(ns, verbose, `Territory warfare done for now. It's crime time...`)
+				}
+			}
+			else {
+				nextTerrWarfareTick = Date.now() + TERR_WAR_INTERVAL;
 			}
 		}
 
@@ -110,33 +125,35 @@ export async function main(ns) {
 			}
 
 			// BUY EQUIPMENT AND AUGS
-			// for payback time, shorter time == less $$ spent
-			// augs last forever including after ascension so assume a very large payback time
-			const paybkTimeEq = 10 * 60;			// 10 min (in seconds)
-			const paybkTimeAug = 30 * 24 * 60 * 60;	// 30 days (in seconds)
-			let equipAugs = GetGangEquipment(ns, true);
-			let equip = GetGangEquipment(ns, false)	// excludes augs
-			let augs = equipAugs.filter(e => e.type == EquipType.AUG);
-			// filter out already owned
-			if (m.upgrades.length > 0 || m.augmentations.length > 0) {
-				equip = equip.filter(e => m.upgrades.includes(e.name) === false);
-				augs = augs.filter(a => m.augmentations.includes(a.name) === false);
-			}
-			// buy 1 aug per loop
-			let cash = ns.getServerMoneyAvailable('home');
-			if (augs.length > 0 && augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
-				if (g.purchaseEquipment(m.name, augs[0].name)) {
-					Vprint(ns, verbose, `🦾Bought aug for ${m.name}: ${augs[0].name} ` +
-						`at ${FormatMoney(augs[0].cost)}`);
+			if (buyEnabled) {
+				// for payback time, shorter time == less $$ spent
+				// augs last forever incl. after ascension so assume a very large payback time
+				const paybkTimeEq = 10 * 60;			// 10 min (in seconds)
+				const paybkTimeAug = 30 * 24 * 60 * 60;	// 30 days (in seconds)
+				let equipAugs = GetGangEquipment(ns, true);
+				let equip = GetGangEquipment(ns, false)	// excludes augs
+				let augs = equipAugs.filter(e => e.type == EquipType.AUG);
+				// filter out already owned
+				if (m.upgrades.length > 0 || m.augmentations.length > 0) {
+					equip = equip.filter(e => m.upgrades.includes(e.name) === false);
+					augs = augs.filter(a => m.augmentations.includes(a.name) === false);
 				}
-			}
-			// buy 1 equipment per loop (must have 5x cash, don't buy during bonusTime)
-			cash = ns.getServerMoneyAvailable('home');
-			if (equip.length > 0) {
-				if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 0)) {
-					if (g.purchaseEquipment(m.name, equip[0].name)) {
-						Vprint(ns, verbose, `🔪Bought equip for ${m.name}: ${equip[0].name} ` +
-							`at ${FormatMoney(equip[0].cost)}`);
+				// buy 1 aug per loop
+				let cash = ns.getServerMoneyAvailable('home');
+				if (augs.length > 0 && augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
+					if (g.purchaseEquipment(m.name, augs[0].name)) {
+						Vprint(ns, verbose, `🦾Bought aug for ${m.name}: ${augs[0].name} ` +
+							`at ${FormatMoney(augs[0].cost)}`);
+					}
+				}
+				// buy 1 equipment per loop (must have 5x cash, don't buy during bonusTime)
+				cash = ns.getServerMoneyAvailable('home');
+				if (equip.length > 0) {
+					if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 0)) {
+						if (g.purchaseEquipment(m.name, equip[0].name)) {
+							Vprint(ns, verbose, `🔪Bought equip for ${m.name}: ` +
+								`${equip[0].name} at ${FormatMoney(equip[0].cost)}`);
+						}
 					}
 				}
 			}
@@ -183,7 +200,7 @@ export async function main(ns) {
 			});
 			if (declareWar) {
 				g.setTerritoryWarfare(declareWar);
-				Vprint(ns, verbose, `⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️ (gang warfare engaged)`);
+				Vprint(ns, verbose, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
 			}
 		}
 		

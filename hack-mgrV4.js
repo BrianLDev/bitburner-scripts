@@ -20,12 +20,15 @@ import { JobType } from "constants.js"
 - other misc TODOS (search)
 */
 export async function main(ns) {
+	ns.disableLog("ALL");
+	
 	// VARIABLES
 	let specificTarget = ns.args[0];	// for a specific target if desired. Type _ to stick with max hackearnrate
 	let hackPct = ns.args[1];		// the % of money Available to target in each hack
 	let maxMinutes = ns.args[2];	// limits max total minutes per batch (TODO)
 	let verbose = ns.args[3];		// true = show output in terminal (DONE)
 	verbose = (verbose == true || verbose == "true") ? true : false;
+	let debug = -1;	// for debug outputs
 
 	if (hackPct == null || hackPct == NaN)
 		hackPct = .30;	// <-- manually enter this in args for now. TODO: AUTOMATE SOMEHOW
@@ -112,10 +115,6 @@ export async function main(ns) {
 			batchesToRun = Math.min (batchesToRun, 1000);	// cap at 1000 runs before restart
 			Vprint(ns, verbose, `--- Updating Batch count to ${batchesToRun} (${target.batchRamReq} RAM req vs ${totalFreeRam} RAM avail.`);
 		}	
-		
-		// // TODO: REMOVE BELOW WHEN DONE TESTING
-		// ns.tprint("DONE!!");
-		// await ns.exit();
 
 		await ns.sleep(cushion * 2);
 	}
@@ -211,11 +210,10 @@ export async function main(ns) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
 				let threads = CalcMaxThreads(ns, weakenfile, host.hostname);
-				let threadsMax = Math.floor(host.maxRam / ns.getScriptRam(weakenfile));
-				threads = Math.min(threadsReq, threads, threadsMax);
+				threads = Math.min(threadsReq+1, threads);	// don't go over required amt
 				if (threads <= 0)
 					continue;	// skip this host if they can't run weaken
-				Vprint(ns, verbose, `Trying to run weaken ${host.hostname} => ${target.hostname} with ${threads} threads`);
+				Vprint(ns, debug, `Trying to run weaken ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
 				if (ns.exec(weakenfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
@@ -244,20 +242,21 @@ export async function main(ns) {
 	async function Grow(target, threadsReq, delay=1) {
 		Vprint(ns, verbose, `~ Starting Grow job on ${target.hostname} for ${threadsReq} threads`)
 		let hosts = GetHosts(ns, false);
-		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram first
+		hosts.sort((a, b) => a.freeRam < b.freeRam ? 1 : -1);	// sort by highest free ram
 		const threadsReqOrig = threadsReq;	// to calc security increase after job complete
-		let minThreadsPct = .20;	// the min % of original threads per job. Avoids messy spreads
+		let minThreadsPct = .20;	// the min % of orig threads per job. Avoids messy spreads
 		while(threadsReq > 0) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
 				let threads = CalcMaxThreads(ns, growfile, host.hostname);
+				threads = Math.min(threadsReq, threads);	// don't go over required amt
 				let threadsMax = Math.floor((host.maxRam-1) / ns.getScriptRam(growfile));
 				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
-				threads = Math.max(threads, threadsMinPct);
-				threads = Math.min(threadsReq, threads, threadsMax);
 				if (threads <= 0)
 					continue;	// skip this host if they can't run weaken
-				Vprint(ns, verbose, `Trying to run Grow ${host.hostname} => ${target.hostname} with ${threads} threads`);
+				else if (threads < threadsMinPct && threads < threadsMax * .80)
+					continue;	// skip host if they are below min and not using > 90% RAM
+				Vprint(ns, debug, `Trying to run Grow ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
 				if (ns.exec(growfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
@@ -295,13 +294,14 @@ export async function main(ns) {
 			for (let i=0; i<hosts.length; i++) {			
 				let host = hosts[i];
 				let threads = CalcMaxThreads(ns, hackfile, host.hostname);
+				threads = Math.min(threadsReq, threads);	// don't go over required amt
 				let threadsMax = Math.floor((host.maxRam-1) / ns.getScriptRam(hackfile));
 				let threadsMinPct = Math.floor(threadsReq * minThreadsPct);
-				threads = Math.max(threads, threadsMinPct);
-				threads = Math.min(threadsReq, threads, threadsMax);
 				if (threads <= 0)
 					continue;	// skip this host if they can't run weaken
-				Vprint(ns, verbose, `Trying to run Hack ${host.hostname} => ${target.hostname} with ${threads} threads`);
+				else if (threads < threadsMinPct && threads < threadsMax * .80)
+					continue;	// skip host if they are below min and not using > 90% RAM
+				Vprint(ns, debug, `Trying to run Hack ${host.hostname} => ${target.hostname} with ${threads} threads`);
 				await CopyHackFilesToHost(ns, host.hostname);
 				let id = Date.now();
 				if (ns.exec(hackfile, host.hostname, threads, target.hostname, delay, verbose, id) > 0) {
@@ -311,7 +311,7 @@ export async function main(ns) {
 					threadsReq -= threads;
 				}
 				else {
-					Vprint(ns, verbose, `WARNING: Couldnt run Grow ${host.hostname} => ${target.hostname} ` + 
+					Vprint(ns, verbose, `WARNING: Couldnt run Hack ${host.hostname} => ${target.hostname} ` + 
 						`with ${threads} threads`);
 				}
 				if (threadsReq <= 0)

@@ -374,12 +374,13 @@ export function Vprint(ns, verbose, string) {
 	string = `[${timestamp}] ${string}`;
 	
 	// print to terminal if verbose == true, always print to log
-	if (verbose) {
+	if (verbose > 0) {
 		ns.tprint(string);
 		ns.print(string);
 	}
-	else
+	else if (verbose == 0)
 		ns.print(string);
+	// to ignore all printing, set verbose to a negative number
 }
 
 export function FormatTabs(str, breakpoint1=7, breakpoint2=14) {
