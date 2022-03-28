@@ -3,7 +3,6 @@ import { Vprint, FormatMoney } from "helper-functions.js"
 
 // NOTE: WORKS AWESOME! (but has a lot of "magic numbers" in code below).
 // TODO: EXTRACT MAGIC NUMBERS AND MAKE THEM INTO GLOBAL OR LOCAL CONSTANTS
-// TODO: FIX TERRITORY WARFARE TIMING SYNC
 
 export async function main(ns) {
 	ns.disableLog("ALL");
@@ -16,10 +15,10 @@ export async function main(ns) {
 	Vprint(ns, true, `Gang manager started. buyEnabled: ${buyEnabled}, verbose: ${verbose}`)
 
 	const g = ns.gang;
-	const TARGET_AVG_STATS_BASE = 50;	// Target base stats before multipliers
-	const ASCEND_MULT = 1.13;			// Ascend when multiplers will grow by this much
-	const LOOP_INTERVAL = 5000-50;		// 5 seconds - 90ms to sync w/ terr war cushion
-	const TERR_WAR_INTERVAL = 20000-250;// 20 seconds - 250ms cushion
+	const TARGET_AVG_STATS_BASE = 50;			// Target base stats before multipliers
+	const ASCEND_MULT = 1.13;					// Ascend when multiplers will grow by this much
+	const TERR_WAR_INTERVAL = 20000-1500;		// 20 seconds - 1.5s cushion
+	let LOOP_INTERVAL = TERR_WAR_INTERVAL / 4;	// roughly 5 seconds per loop
 
 	let gangInfo, gangMembers, bonusTime;
 
@@ -30,7 +29,7 @@ export async function main(ns) {
 		// UPDATE GANG INFO
 		gangInfo = g.getGangInformation();
 		gangMembers = GetGangMembers(ns);
-		bonusTime = g.getBonusTime();
+		bonusTime = g.getBonusTime();	// bonusTime often has random small values < 5
 
 		// RECRUIT NEW MEMBERS
 		if (g.canRecruitMember()) {
@@ -41,7 +40,7 @@ export async function main(ns) {
 		}
 		
 		// TERRITORY WARFARE (ENGAGE ONCE EVERY 20 SEC, SYNCHRONIZED WITH CHECK)
-		if (bonusTime <= 0) {
+		if (bonusTime <= 5) {
 			if (Math.random() > gangInfo.territory) {	// runs more often with low territory
 				if (Date.now() >= nextTerrWarfareTick) {
 					Vprint(ns, verbose, `⚔️All gang members temporarily assigned to territory warfare.`)
@@ -50,11 +49,9 @@ export async function main(ns) {
 						g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 					})
 					nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
+					LOOP_INTERVAL = (nextTerrWarfareTick - Date.now()) / 4;
 					Vprint(ns, verbose, `Territory warfare done for now. It's crime time...`)
 				}
-			}
-			else {
-				nextTerrWarfareTick = Date.now() + TERR_WAR_INTERVAL;
 			}
 		}
 
@@ -64,9 +61,13 @@ export async function main(ns) {
 			
 			// ASSIGN TASKS
 			if (m.isTrained) {
-				let rand = Math.random()
+				let rand = Math.random();
+				// TERRITORY WARFARE DURING BONUS TIME (10% CHANCE)
+				if (bonusTime >= 5 && rand <= .10)
+					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 				// HACKING GANG TASKS
-				if (gangInfo.isHacking) {
+				else if (gangInfo.isHacking) {
+					rand = Math.random();
 					// reduce wanted penalty when it gets bad (lower=worse)
 					if (gangInfo.wantedPenalty < rand)
 						g.setMemberTask(m.name, GangTasks.Hacking.ETHICAL_HACKING);
@@ -78,7 +79,8 @@ export async function main(ns) {
 						g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
 					// late game
 					else {
-						if (m.earnedRespect < 15000 * m.avgAscMult)
+						rand = Math.random();
+						if (rand < .40)
 							g.setMemberTask(m.name, GangTasks.Hacking.CYBERTERRORISM);
 						else
 							g.setMemberTask(m.name, GangTasks.Hacking.MONEY_LAUNDERING);
@@ -86,6 +88,7 @@ export async function main(ns) {
 				}
 				// COMBAT GANG TASKS
 				else {
+					rand = Math.random();
 					// reduce wanted penalty when it gets bad (lower=worse)
 					if (gangInfo.wantedPenalty < rand)
 						g.setMemberTask(m.name, GangTasks.Combat.VIGILANTE_JUSTICE);
@@ -110,13 +113,18 @@ export async function main(ns) {
 							g.setMemberTask(m.name, GangTasks.Combat.CON);
 					}
 					// mid-late game
-					else if (m.avgStats < 500)
-						g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
+					else if (m.avgStats < 500) {
+						rand = Math.random();
+						if (rand < .40)
+							g.setMemberTask(m.name, GangTasks.Combat.CON);
+						else
+							g.setMemberTask(m.name, GangTasks.Combat.TRAFFICK_ARMS);
+					}
 					// late game
 					else {
-						if (m.agi < TARGET_AVG_STATS_BASE * m.avgAscMult * .75)
+						if (m.agi < TARGET_AVG_STATS_BASE * m.avgAscMult * .50)
 							g.setMemberTask(m.name, GangTasks.Combat.CON);
-						else if (m.earnedRespect < 15000 * m.avgAscMult)
+						else if (m.earnedRespect < 10000 * m.avgAscMult)
 							g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
 						else
 							g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
@@ -149,7 +157,7 @@ export async function main(ns) {
 				// buy 1 equipment per loop (must have 5x cash, don't buy during bonusTime)
 				cash = ns.getServerMoneyAvailable('home');
 				if (equip.length > 0) {
-					if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 0)) {
+					if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 5)) {
 						if (g.purchaseEquipment(m.name, equip[0].name)) {
 							Vprint(ns, verbose, `🔪Bought equip for ${m.name}: ` +
 								`${equip[0].name} at ${FormatMoney(equip[0].cost)}`);
@@ -205,7 +213,8 @@ export async function main(ns) {
 		}
 		
 		// END OF LOOP
-		await ns.sleep(LOOP_INTERVAL);
+		let bonusDivisor = bonusTime > 5 ? 10 : 1;	// loops run 10x faster during bonusTime
+		await ns.sleep(LOOP_INTERVAL / bonusDivisor);
 	}
 }
 
