@@ -1,5 +1,0 @@
-while(true) {
-	grow('n00dles');
-	weaken('n00dles');
-	hack('n00dles');
-}
