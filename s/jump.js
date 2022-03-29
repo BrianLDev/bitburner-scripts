@@ -9,6 +9,10 @@ export async function main(ns) {
 	}
 
 	let path = GetPathToTarget(ns, target, "home")
+	if (path === undefined) {
+		ns.tprint(`ERROR: target ${target} not found. Check spelling and try again.`);
+		ns.exit();
+	}
 	ns.tprint(`Connecting via path => ${path}`);
 	ConnectByPath(ns, path);
 }

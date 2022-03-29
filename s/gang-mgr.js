@@ -62,8 +62,8 @@ export async function main(ns) {
 			// ASSIGN TASKS
 			if (m.isTrained) {
 				let rand = Math.random();
-				// TERRITORY WARFARE DURING BONUS TIME (10% CHANCE)
-				if (bonusTime >= 5 && rand <= .10)
+				// TERRITORY WARFARE DURING BONUS TIME (less frequent the more territory owned)
+				if (bonusTime >= 5 && rand < .55 - gangInfo.territory)
 					g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 				// HACKING GANG TASKS
 				else if (gangInfo.isHacking) {
@@ -124,8 +124,13 @@ export async function main(ns) {
 					else {
 						if (m.agi < TARGET_AVG_STATS_BASE * m.avgAscMult * .50)
 							g.setMemberTask(m.name, GangTasks.Combat.CON);
-						else if (m.earnedRespect < 10000 * m.avgAscMult)
-							g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
+						else if (m.earnedRespect < 10000 * m.avgAscMult) {
+							rand = Math.random();
+							if (rand < .40)
+								g.setMemberTask(m.name, GangTasks.Combat.TERRORISM);
+							else
+								g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
+						}
 						else
 							g.setMemberTask(m.name, GangTasks.Combat.HUMAN_TRAFFICKING);
 					}
@@ -201,11 +206,15 @@ export async function main(ns) {
 			let otherGangs = g.getOtherGangInformation();
 			let otherGangsArr = Object.entries(otherGangs);
 			let declareWar = true;
-			otherGangsArr.forEach(gang => {
+			for (let gang of otherGangsArr) {
 				gang = gang[1];
-				if (gangInfo.power < gang.power || gang.power == undefined)
+				// skip self
+				if (gangInfo.power === gang.power)
+					continue;
+				// check if our gang's power is > 10% stronger vs all other gangs
+				if (gangInfo.power < gang.power * 1.10 || gang.power == undefined)
 					declareWar = false;
-			});
+			}
 			if (declareWar) {
 				g.setTerritoryWarfare(declareWar);
 				Vprint(ns, verbose, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
