@@ -25,7 +25,7 @@ export async function main(ns) {
 				let threads = Math.floor(host.freeRam / fileRam);
 				if (!ns.fileExists(chargeFile, host.hostname))
 					await ns.scp(chargeFile, 'home', host.hostname);
-				if (threads >= frag.avgCharge * .75) {
+				if (threads >= frag.highestCharge * .75) {
 					let numChargePrev = frag.numCharge;
 					ns.exec(chargeFile, host.hostname, threads, frag.x, frag.y);
 					charged = true;

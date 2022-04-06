@@ -33,6 +33,46 @@ export const City = {
 	volhaven: 'Volhaven'
 }
 
+// enum of University Names
+export const UniName = {
+	rothman: 'Rothman University',
+	zb: 'ZB Institute of Technology',
+	summit: 'Summit University'
+}
+
+// enum of university courses
+export const Course = {
+	cs: 'Computer Science',	// free
+	data: 'Data Structures',
+	networks: 'Networks',
+	algorithms: 'Algorithms',
+	management: 'Management',
+	leadership: 'Leadership'
+}
+
+// enum of gym names
+export const GymName = {
+	iron: 'Iron Gym',
+	powerhouse: 'Powerhouse Gym',
+	crush: 'Crush Fitness Gym',
+	millenium: 'Millenium Fitness',
+	snap: 'Snap Fitness'
+}
+
+// enum of programs
+export const Program = {
+	ssh: "BruteSSH.exe",
+	ftp: "FTPCrack.exe",
+	smtp: "relaySMTP.exe",
+	http: "HTTPWorm.exe",
+	sql: "SQLInject.exe",
+	serverProfiler: "ServerProfiler.exe",
+	autolink: "AutoLink.exe",
+	deepscan1: "DeepscanV1.exe",
+	deepscan2: "DeepscanV2.exe",
+	formulas: "Formulas.exe"
+}
+
 // enum of all crimes
 export const Crime = {
 	shoplift: "shoplift",
@@ -49,19 +89,21 @@ export const Crime = {
 	heist: "heist",
 };
 
-// enum of programs
-export const Program = {
-	ssh: "BruteSSH.exe",
-	ftp: "FTPCrack.exe",
-	smtp: "relaySMTP.exe",
-	http: "HTTPWorm.exe",
-	sql: "SQLInject.exe",
-	serverProfiler: "ServerProfiler.exe",
-	autolink: "AutoLink.exe",
-	deepscan1: "DeepscanV1.exe",
-	deepscan2: "DeepscanV2.exe",
-	formulas: "Formulas.exe"
-}
+// enum of all crimes for sleeves
+export const SleeveCrime = {
+	shoplift: "Shoplift",
+	rob: "Rob Store",
+	mug: "Mug Someone",
+	larceny: "Larceny",
+	dealDrugs: "Deal Drugs",
+	bondForgery: "Bond Forgery",
+	traffickIllegalArms: "Traffick Arms",
+	homicide: "Homicide",
+	grandTheftAuto: "Grand Theft Auto",
+	kidnap: "Kidnap",
+	assassination: "Assassination",
+	heist: "Heist",
+};
 
 // enum of corp industries
 export const CorpIndustry = {

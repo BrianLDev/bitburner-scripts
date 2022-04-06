@@ -141,7 +141,7 @@ export async function main(ns) {
 			if (buyEnabled) {
 				// for payback time, shorter time == less $$ spent
 				// augs last forever incl. after ascension so assume a very large payback time
-				const paybkTimeEq = 10 * 60;			// 10 min (in seconds)
+				const paybkTimeEq = 30 * 60;			// 30 min (in seconds)
 				const paybkTimeAug = 30 * 24 * 60 * 60;	// 30 days (in seconds)
 				let equipAugs = GetGangEquipment(ns, true);
 				let equip = GetGangEquipment(ns, false)	// excludes augs
@@ -153,6 +153,7 @@ export async function main(ns) {
 				}
 				// buy 1 aug per loop
 				let cash = ns.getServerMoneyAvailable('home');
+
 				if (augs.length > 0 && augs[0].cost < gangInfo.moneyGainRate * paybkTimeAug && augs[0].cost < cash) {
 					if (g.purchaseEquipment(m.name, augs[0].name)) {
 						Vprint(ns, verbose, `🦾Bought aug for ${m.name}: ${augs[0].name} ` +
@@ -161,6 +162,7 @@ export async function main(ns) {
 				}
 				// buy 1 equipment per loop (must have 5x cash, don't buy during bonusTime)
 				cash = ns.getServerMoneyAvailable('home');
+				// Vprint(ns, true, `${equip[0].name}: ${FormatMoney(equip[0].cost)} < ${FormatMoney(gangInfo.moneyGainRate * paybkTimeEq)}? ${equip[0].cost < gangInfo.moneyGainRate * paybkTimeEq}`)
 				if (equip.length > 0) {
 					if ((equip[0].cost < gangInfo.moneyGainRate*paybkTimeEq) && (equip[0].cost < cash*5) && (bonusTime <= 5)) {
 						if (g.purchaseEquipment(m.name, equip[0].name)) {
@@ -211,13 +213,13 @@ export async function main(ns) {
 				// skip self
 				if (gangInfo.power === gang.power)
 					continue;
-				// check if our gang's power is > 10% stronger vs all other gangs
-				if (gangInfo.power < gang.power * 1.10 || gang.power == undefined)
+				// check if our gang's power is > 50% stronger vs all other gangs
+				if (gangInfo.power < gang.power * 1.50 || gang.power == undefined)
 					declareWar = false;
 			}
 			if (declareWar) {
 				g.setTerritoryWarfare(declareWar);
-				Vprint(ns, verbose, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
+				Vprint(ns, true, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
 			}
 		}
 		
