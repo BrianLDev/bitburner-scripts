@@ -116,7 +116,7 @@ export const CorpIndustry = {
 	healthcare: "Healthcare",
 	mining: "Mining",
 	pharma: "Pharmaceutical",
-	realEstate: "Real Estate",
+	realEstate: "RealEstate",
 	robotics: "Robotics",
 	software: "Software",
 	tobacco: "Tobacco",

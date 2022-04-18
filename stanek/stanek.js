@@ -15,7 +15,7 @@ export async function main(ns) {
 		let fragments = ns.stanek.activeFragments();
 		for (let frag of fragments) {
 			// skip booster fragments that can't be charged (id 100-107)
-			if (frag.id > 99)
+			if (!frag || frag === undefined || frag.id > 99)
 				continue;
 			
 			let charged = false;
@@ -25,7 +25,7 @@ export async function main(ns) {
 				let threads = Math.floor(host.freeRam / fileRam);
 				if (!ns.fileExists(chargeFile, host.hostname))
 					await ns.scp(chargeFile, 'home', host.hostname);
-				if (threads >= frag.highestCharge * .75) {
+				if (threads > 1 && threads >= frag.highestCharge * .75) {
 					let numChargePrev = frag.numCharge;
 					ns.exec(chargeFile, host.hostname, threads, frag.x, frag.y);
 					charged = true;

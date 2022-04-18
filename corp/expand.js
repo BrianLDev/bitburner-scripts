@@ -2,6 +2,8 @@
 import * as c from "constants.js"
 import { Vprint } from "helper-functions.js"
 
+// REQUIRES WAREHOUSE AND OFFICE API'S TO WORK
+
 export async function main(ns) {
 	let industryType = ns.args[0];
 	let divisionName = ns.args[1];	// TODO: AUTOMATE INDUSTRY NAMING WITH AN ENUM (CONST OBJ)

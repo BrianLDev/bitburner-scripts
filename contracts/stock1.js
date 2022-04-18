@@ -9,8 +9,9 @@ Determine the maximum possible profit you can earn using at most one transaction
 
 
 // INPUT
-let prices = 
-[167,151,178,38,29,104,186,138,179,110,14,83,140,199,57]
+let prices = [
+169,62,103,38,2,199,151,79,119,134,57,173,135,68,60,154,53,146,17,127
+]
 
 // OUTPUT
 let maxProfit = MaxProfit(prices);

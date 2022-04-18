@@ -75,7 +75,7 @@ export async function main(ns) {
 					else if (m.hack < 100)
 						g.setMemberTask(m.name, GangTasks.Hacking.PHISHING);
 					// mid game
-					else if (m.hack < 500)
+					else if (m.hack < 5000)
 						g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
 					// late game
 					else {
@@ -202,7 +202,7 @@ export async function main(ns) {
 		});
 
 		// GANG TERRITORY WARFARE ON/OFF
-		if (!gangInfo.territoryWarfareEngaged && gangInfo.power > 5) {
+		if (gangInfo.power > 5) {
 			gangInfo = g.getGangInformation();
 			// have to do gymnastics here to convert messy object w/ magic strings into a clean array
 			let otherGangs = g.getOtherGangInformation();
@@ -213,13 +213,17 @@ export async function main(ns) {
 				// skip self
 				if (gangInfo.power === gang.power)
 					continue;
-				// check if our gang's power is > 50% stronger vs all other gangs
-				if (gangInfo.power < gang.power * 1.50 || gang.power == undefined)
+				// check if our gang's power is > 30% stronger vs all other gangs
+				if (gangInfo.power < gang.power * 1.30 || gang.power == undefined)
 					declareWar = false;
 			}
-			if (declareWar) {
+			if (declareWar == true && gangInfo.territoryWarfareEngaged == false) {
 				g.setTerritoryWarfare(declareWar);
 				Vprint(ns, true, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
+			}
+			else if (declareWar == false && gangInfo.territoryWarfareEngaged == true) {
+				g.setTerritoryWarfare(declareWar);
+				Vprint(ns, true, `🏃💨💨 RETREAT!!! 🏃💨💨 (gang warfare disengaged)`);
 			}
 		}
 		
@@ -244,13 +248,14 @@ export async function GetTerrWarfareTick(ns) {
 	return Date.now()-5;	// return now minus 5 ms cushion
 }
 
+// TRAIN MEMBER
 export function TrainMember(ns, member, targetAvgStatsBase) {
 	const g = ns.gang;
 	let gangInfo = g.getGangInformation();
 	member.isTrained = false;
 
+	// HACKING GANG TRAINING
 	if (gangInfo.isHacking) {
-		// Hacking gang training
 		if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
 			// even hacking gang needs combat stats for territory warfare
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_COMBAT);
@@ -258,14 +263,14 @@ export function TrainMember(ns, member, targetAvgStatsBase) {
 		else if (member.hack < targetAvgStatsBase * member.hack_mult) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_HACKING);
 		}
-		else if (member.cha < targetAvgStatsBase * member.cha_mult  * 0.75) {
+		else if (member.cha < targetAvgStatsBase * member.cha_mult) {
 			g.setMemberTask(member.name, GangTasks.Hacking.TRAIN_CHARISMA);
 		}
 		else
 			member.isTrained = true;
 	}
+	// COMBAT GANG TRAINING
 	else {
-		// Combat gang training
 		if (member.avgCombatStats < targetAvgStatsBase * member.avgMult) {
 			g.setMemberTask(member.name, GangTasks.Combat.TRAIN_COMBAT);
 		}

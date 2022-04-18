@@ -2,13 +2,15 @@
 import * as c from "constants.js";
 import { Vprint, FormatMoney } from "helper-functions.js";
 
+// REQUIRES PURCHASE OF OFFICE API TO WORK
+
 export async function main(ns) {
 	ns.disableLog("ALL");
 	
-	let divisionName = ns.args[0];
-	let cityName = ns.args[1];
-	let hireCount = ns.args[2];
-	let verbose = ns.args[3];
+	let divisionName = ns.args[0];	// required (use the nickname you created)
+	let hireCount = ns.args[1];		// optional: defaults to 1
+	let cityName = ns.args[2];		// optional: defaults to all cities
+	let verbose = ns.args[3];		// optional: output to terminal
 	verbose = (verbose == true || verbose == "true") ? true : false;
 
 	const corp = ns.corporation;
