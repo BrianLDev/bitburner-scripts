@@ -10,7 +10,7 @@ Determine the maximum possible profit you can earn using at most one transaction
 
 // INPUT
 let prices = 
-[63,30,26,170,57,85,86,90,183]
+[167,151,178,38,29,104,186,138,179,110,14,83,140,199,57]
 
 // OUTPUT
 let maxProfit = MaxProfit(prices);
