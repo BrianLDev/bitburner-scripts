@@ -43,10 +43,17 @@ export async function main(ns) {
 		}
 		ns.tprint(`Sleeve homicide mode complete.`);
 	}
+	// RECOVERY MODE
+	else if (mode === Mode.recovery) {
+		for (let i=0; i<sleeveCount; i++) {
+			ns.sleeve.setToShockRecovery(i);
+		}
+	}
 }
 
 export const Mode = {
 	train: 'train',
-	homicide: 'homicide'
+	homicide: 'homicide',
+	recovery: 'recovery'
 };
 export const ModeArr = Object.values(Mode);

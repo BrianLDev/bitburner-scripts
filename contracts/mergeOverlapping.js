@@ -15,7 +15,7 @@ The intervals must be returned in ASCENDING order. You can assume that in an int
 
 // INPUT
 let intervals = 
-[[5,13],[4,14],[22,31],[17,26],[6,14],[17,27],[14,20],[10,20],[18,23],[7,13],[1,6],[21,23]]
+[[10,18],[2,11],[10,12],[12,18],[13,17],[13,20],[19,20],[15,25],[23,32],[7,14],[6,8],[17,23],[9,12],[11,19]]
 
 // OUTPUT
 let merged = MergeOverlappingIntervals(intervals);
@@ -56,8 +56,6 @@ function MergeOverlappingIntervals(arr) {
 }
 
 function Overlaps(a, b) {
-  // console.log(`Checking if ${b[0]} overlaps [${a[0]},${a[1]}] ? ${b[0] >= a[0] && b[0] <= a[1]}`);
-  // console.log(`Checking if ${b[1]} overlaps [${a[0]},${a[1]}] ? ${b[1] >= a[0] && b[1] <= a[1]}`);
   if (b[0] >= a[0] && b[0] <= a[1])
     return true;
   else if (b[1] >= a[0] && b[1] <= a[1])

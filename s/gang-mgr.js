@@ -9,14 +9,15 @@ export async function main(ns) {
 	let buyEnabled = ns.args[0];
 	let verbose = ns.args[1];
 
-	buyEnabled = (buyEnabled == false || buyEnabled == "false") ? false : true
-	verbose = (verbose == true || verbose == "true") ? true : false
+	buyEnabled = (buyEnabled == false || buyEnabled == "false") ? false : true;
+	verbose = (verbose == true || verbose == "true") ? true : false;
 
 	Vprint(ns, true, `Gang manager started. buyEnabled: ${buyEnabled}, verbose: ${verbose}`)
 
 	const g = ns.gang;
 	const TARGET_AVG_STATS_BASE = 50;			// Target base stats before multipliers
 	const ASCEND_MULT = 1.13;					// Ascend when multiplers will grow by this much
+	const ASCEND_MULT_HACK = 1.20;				// Ascend multiplier for hacking gang
 	const TERR_WAR_INTERVAL = 20000-1500;		// 20 seconds - 1.5s cushion
 	let LOOP_INTERVAL = TERR_WAR_INTERVAL / 4;	// roughly 5 seconds per loop
 
@@ -43,14 +44,14 @@ export async function main(ns) {
 		if (bonusTime <= 5) {
 			if (Math.random() > gangInfo.territory) {	// runs more often with low territory
 				if (Date.now() >= nextTerrWarfareTick) {
-					Vprint(ns, verbose, `⚔️All gang members temporarily assigned to territory warfare.`)
+					// Vprint(ns, verbose, `⚔️All gang members temporarily assigned to territory warfare.`)
 					// assign everyone to territory warfare
 					gangMembers.forEach(m => {
 						g.setMemberTask(m.name, GangTasks.Hacking.TERRITORY_WARFARE);
 					})
 					nextTerrWarfareTick = await GetTerrWarfareTick(ns) + TERR_WAR_INTERVAL;
 					LOOP_INTERVAL = (nextTerrWarfareTick - Date.now()) / 4;
-					Vprint(ns, verbose, `Territory warfare done for now. It's crime time...`)
+					// Vprint(ns, verbose, `Territory warfare done for now. It's crime time...`)
 				}
 			}
 		}
@@ -75,7 +76,7 @@ export async function main(ns) {
 					else if (m.hack < 100)
 						g.setMemberTask(m.name, GangTasks.Hacking.PHISHING);
 					// mid game
-					else if (m.hack < 5000)
+					else if (m.hack < 2500)
 						g.setMemberTask(m.name, GangTasks.Hacking.FRAUD);
 					// late game
 					else {
@@ -181,7 +182,7 @@ export async function main(ns) {
 			if (m.ascMult && (respectRemain > gangInfo.wantedLevel * gangMembers.length)) {
 				if (gangInfo.isHacking) {
 					// Hacking gang ascension
-					if (m.ascMult.hack > ASCEND_MULT) {
+					if (m.ascMult.hack > ASCEND_MULT_HACK) {
 						Vprint(ns, verbose, `🌟Gang member is ascending!  ${m.name}`)
 						g.ascendMember(m.name);	
 					}

@@ -4,7 +4,7 @@ A prime factor is a factor that is a prime number. What is the largest prime fac
 */
 
 // INPUT
-let x = 848086277;
+let x = 492635048;
 
 // OUTPUT
 let lpf = LargestPrimeFactor(x);
