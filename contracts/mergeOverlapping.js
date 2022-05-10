@@ -15,7 +15,7 @@ The intervals must be returned in ASCENDING order. You can assume that in an int
 
 // INPUT
 let intervals = 
-[[10,18],[2,11],[10,12],[12,18],[13,17],[13,20],[19,20],[15,25],[23,32],[7,14],[6,8],[17,23],[9,12],[11,19]]
+[[9,15],[15,24],[22,27],[25,31],[17,20],[19,27],[17,26],[15,20],[21,28],[7,17],[4,7],[5,14],[21,22],[21,31],[20,30],[3,10],[20,24],[13,23],[12,13],[7,15]]
 
 // OUTPUT
 let merged = MergeOverlappingIntervals(intervals);

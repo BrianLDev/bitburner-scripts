@@ -23,12 +23,24 @@ export async function QuickstartEndGame(ns) {
 	const F_Bkdr = "s/bkdr.js";
 	const F_HnsMgr = "hn/hns-mgr.js";
 	const F_BbMgr = "bb-mgr.js";
+	const F_Sleeves = "s/sleeves.js"
+	const F_Stanek = "s/stanek.js"
 	const U_Rothman = "Rothman University";
 	const C_Algorithms = "Algorithms";
 	const C_Leadership = "Leadership";
 
+	// START TRAINING
 	ns.universityCourse(U_Rothman, C_Algorithms, false);
-	ns.purchaseTor();
+	ns.exec(F_Sleeves, "home", 1, "quickstart");	// put sleeves to work making money
+	// BUY PROGRAMS
+	let torPurchased = false;
+	for (let i=0; i<10; i++) {
+		torPurchased = ns.purchaseTor();
+		if (torPurchased)
+			break;
+		else
+			await ns.sleep(500);
+	}
 	ns.connect("darkweb");
 	await ns.sleep(100);
 	let boughtPrograms = 0;
@@ -46,22 +58,20 @@ export async function QuickstartEndGame(ns) {
 		await ns.sleep(10);
 		ns.tprint(`Program count: ${boughtPrograms} vs ${ProgramsArr.length}`);
 	}
-
 	ns.connect("home");
-	// Start BladeBurner training if available
-	ns.exec(F_BbMgr, "home", 1);
-	// wait 1 second to build up a bit of hacking power then rootall
-	await ns.sleep(1000);
+
+	// RUN ALL QUICKSTART PROGRAMS
+	ns.exec(F_BbMgr, "home", 1);	// start BladeBurner training if available
+	ns.exec(F_HnsMgr, "home", 1);	// start hashnet server manager
+	// wait 1 sec to build a bit of hacking power then rootall
+	await ns.sleep(1000);			
 	ns.exec(F_RootAll, "home", 1);
-	// slight delay then start hacking
-	await ns.sleep(500);
-	ns.exec(F_HackMgr, "home", 1);
 	// slight delay then run backdoor
 	await ns.sleep(500);
 	ns.exec(F_Bkdr, "home", 1);
-	// start hashnet server manager
-	ns.exec(F_HnsMgr, "home", 1);
-	// put sleeves to work
-	// TODO: PUT SLEEVES TO WORK 
-	// NOTE: SLEEVES MAY BE DEPRECATED IN FUTURE SO MAKE A SEPARATE SLEEVE MANAGER SCRIPT
+	// slight delay then start hacking
+	await ns.sleep(500);
+	ns.exec(F_HackMgr, "home", 1);
+	// start stanek (wait until end since it hogs RAM)
+	ns.exec(F_Stanek, "home", 1);	
 }

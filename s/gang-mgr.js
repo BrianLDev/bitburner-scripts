@@ -1,7 +1,8 @@
 /** @param {NS} ns **/
 import { Vprint, FormatMoney } from "helper-functions.js"
 
-// NOTE: WORKS AWESOME! (but has a lot of "magic numbers" in code below).
+// TODO: HANDLE GANG MEMBER DEATH W/O CRASHING, RECRUIT NEW MEMBER W/ SAME NAME AS ONE THAT DIED
+// NOTE: SCRIPT WORKS GREAT! (but has a few "magic numbers" in code below).
 // TODO: EXTRACT MAGIC NUMBERS AND MAKE THEM INTO GLOBAL OR LOCAL CONSTANTS
 
 export async function main(ns) {
@@ -9,8 +10,8 @@ export async function main(ns) {
 	let buyEnabled = ns.args[0];
 	let verbose = ns.args[1];
 
-	buyEnabled = (buyEnabled == false || buyEnabled == "false") ? false : true;
-	verbose = (verbose == true || verbose == "true") ? true : false;
+	buyEnabled = (buyEnabled == true || buyEnabled == "true") ? true : false;	// default=false
+	verbose = (verbose == true || verbose == "true") ? true : false;			// default=false
 
 	Vprint(ns, true, `Gang manager started. buyEnabled: ${buyEnabled}, verbose: ${verbose}`)
 
@@ -222,6 +223,7 @@ export async function main(ns) {
 				g.setTerritoryWarfare(declareWar);
 				Vprint(ns, true, `⚔️⚔️⚔️ THIS MEANS WAR!!! ⚔️⚔️⚔️ (gang warfare engaged)`);
 			}
+			// retreat if power falls below 30% stronger
 			else if (declareWar == false && gangInfo.territoryWarfareEngaged == true) {
 				g.setTerritoryWarfare(declareWar);
 				Vprint(ns, true, `🏃💨💨 RETREAT!!! 🏃💨💨 (gang warfare disengaged)`);
