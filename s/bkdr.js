@@ -30,10 +30,15 @@ export async function main(ns) {
 
 	ns.connect("home");
 	ns.tprint("DONE!");
-	ns.tprint(`Got backdoor access on: ${gotBackdoorAccess}`);
+	if (gotBackdoorAccess.length > 0)
+		ns.tprint(`Got backdoor access on: ${gotBackdoorAccess}`);
+	else
+		ns.tprint(`No backdoor action this time.`);
 }
 
+
 export const PrimaryTargets = ['CSEC', 'avmnite-02h', 'I.I.I.I', 'run4theh111z', 'The-Cave'];
+
 
 export async function BackdoorNestedServers(ns, targets=primaryTargets, parentName="home", grandparentName="home", verbose=true) {
 	Vprint(ns, verbose, `~~ Checking out the backdoors nested inside ${parentName}`);
